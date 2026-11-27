@@ -38,7 +38,10 @@ final class PostProcessingPipeline {
         outputFormat: String? = nil,
         normalizeNumbers: Bool? = nil
     ) async throws -> PostProcessingResult {
-        let processors = postProcessors
+        // "Füllwörter entfernen" (Diktat › Text) switches the filler-word
+        // processor off; every other processor always runs.
+        let removesFillerWords = UserDefaults.standard.object(forKey: UserDefaultsKeys.fillerWordRemovalEnabled) as? Bool ?? true
+        let processors = postProcessors.filter { removesFillerWords || $0.id != "com.leise.filler-words" }
 
         // Build priority-ordered step list: (priority, id)
         // IDs: -3 = dictionary, -4 = app formatter, -5 = punctuation, -6 = normalization, 0+ = processor index

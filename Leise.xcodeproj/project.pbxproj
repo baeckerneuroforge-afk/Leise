@@ -451,26 +451,6 @@
 			<key>sourceTree</key>
 			<string>&lt;group&gt;</string>
 		</dict>
-		<key>2F4D6A8B0C1E3F5A7B9D2C50</key>
-		<dict>
-			<key>fileRef</key>
-			<string>2F4D6A8B0C1E3F5A7B9D2C51</string>
-			<key>isa</key>
-			<string>PBXBuildFile</string>
-		</dict>
-		<key>2F4D6A8B0C1E3F5A7B9D2C51</key>
-		<dict>
-			<key>includeInIndex</key>
-			<string>1</string>
-			<key>isa</key>
-			<string>PBXFileReference</string>
-			<key>lastKnownFileType</key>
-			<string>sourcecode.swift</string>
-			<key>path</key>
-			<string>IndicatorTranscriptPreviewSizingTests.swift</string>
-			<key>sourceTree</key>
-			<string>&lt;group&gt;</string>
-		</dict>
 		<key>3A4B5C6D7E8F901234567890</key>
 		<dict>
 			<key>fileRef</key>
@@ -1538,38 +1518,10 @@
 			<key>isa</key>
 			<string>PBXBuildFile</string>
 		</dict>
-		<key>AA00000000000000000120</key>
-		<dict>
-			<key>fileRef</key>
-			<string>BB00000000000000000120</string>
-			<key>isa</key>
-			<string>PBXBuildFile</string>
-		</dict>
 		<key>AA00000000000000000904</key>
 		<dict>
 			<key>fileRef</key>
 			<string>BB00000000000000000904</string>
-			<key>isa</key>
-			<string>PBXBuildFile</string>
-		</dict>
-		<key>AA00000000000000000901</key>
-		<dict>
-			<key>fileRef</key>
-			<string>BB00000000000000000901</string>
-			<key>isa</key>
-			<string>PBXBuildFile</string>
-		</dict>
-		<key>AA00000000000000000121</key>
-		<dict>
-			<key>fileRef</key>
-			<string>BB00000000000000000121</string>
-			<key>isa</key>
-			<string>PBXBuildFile</string>
-		</dict>
-		<key>AA00000000000000000122</key>
-		<dict>
-			<key>fileRef</key>
-			<string>BB00000000000000000122</string>
 			<key>isa</key>
 			<string>PBXBuildFile</string>
 		</dict>
@@ -1629,31 +1581,10 @@
 			<key>isa</key>
 			<string>PBXBuildFile</string>
 		</dict>
-		<key>AA00000000000000000205</key>
-		<dict>
-			<key>fileRef</key>
-			<string>BB00000000000000000198</string>
-			<key>isa</key>
-			<string>PBXBuildFile</string>
-		</dict>
-		<key>AA00000000000000000206</key>
-		<dict>
-			<key>fileRef</key>
-			<string>BB00000000000000000195</string>
-			<key>isa</key>
-			<string>PBXBuildFile</string>
-		</dict>
 		<key>AA00000000000000000207</key>
 		<dict>
 			<key>fileRef</key>
 			<string>BB00000000000000000196</string>
-			<key>isa</key>
-			<string>PBXBuildFile</string>
-		</dict>
-		<key>AA00000000000000000208</key>
-		<dict>
-			<key>fileRef</key>
-			<string>BB00000000000000000197</string>
 			<key>isa</key>
 			<string>PBXBuildFile</string>
 		</dict>
@@ -1748,13 +1679,6 @@
 			<key>isa</key>
 			<string>PBXBuildFile</string>
 		</dict>
-		<key>AA00000000000000000262</key>
-		<dict>
-			<key>fileRef</key>
-			<string>BB00000000000000000250</string>
-			<key>isa</key>
-			<string>PBXBuildFile</string>
-		</dict>
 		<key>AA00000000000000000283</key>
 		<dict>
 			<key>fileRef</key>
@@ -1802,20 +1726,6 @@
 		<dict>
 			<key>fileRef</key>
 			<string>BB00000000000000000320</string>
-			<key>isa</key>
-			<string>PBXBuildFile</string>
-		</dict>
-		<key>AA00000000000000000321</key>
-		<dict>
-			<key>fileRef</key>
-			<string>BB00000000000000000309</string>
-			<key>isa</key>
-			<string>PBXBuildFile</string>
-		</dict>
-		<key>AA00000000000000000322</key>
-		<dict>
-			<key>fileRef</key>
-			<string>BB00000000000000000310</string>
 			<key>isa</key>
 			<string>PBXBuildFile</string>
 		</dict>
@@ -2660,17 +2570,6 @@
 			<key>sourceTree</key>
 			<string>&lt;group&gt;</string>
 		</dict>
-		<key>BB00000000000000000120</key>
-		<dict>
-			<key>isa</key>
-			<string>PBXFileReference</string>
-			<key>lastKnownFileType</key>
-			<string>sourcecode.swift</string>
-			<key>path</key>
-			<string>NotchIndicatorPanel.swift</string>
-			<key>sourceTree</key>
-			<string>&lt;group&gt;</string>
-		</dict>
 		<key>BB00000000000000000904</key>
 		<dict>
 			<key>isa</key>
@@ -2679,39 +2578,6 @@
 			<string>sourcecode.swift</string>
 			<key>path</key>
 			<string>RecordingReminderService.swift</string>
-			<key>sourceTree</key>
-			<string>&lt;group&gt;</string>
-		</dict>
-		<key>BB00000000000000000901</key>
-		<dict>
-			<key>isa</key>
-			<string>PBXFileReference</string>
-			<key>lastKnownFileType</key>
-			<string>sourcecode.swift</string>
-			<key>path</key>
-			<string>IndicatorPanelBase.swift</string>
-			<key>sourceTree</key>
-			<string>&lt;group&gt;</string>
-		</dict>
-		<key>BB00000000000000000121</key>
-		<dict>
-			<key>isa</key>
-			<string>PBXFileReference</string>
-			<key>lastKnownFileType</key>
-			<string>sourcecode.swift</string>
-			<key>path</key>
-			<string>NotchIndicatorView.swift</string>
-			<key>sourceTree</key>
-			<string>&lt;group&gt;</string>
-		</dict>
-		<key>BB00000000000000000122</key>
-		<dict>
-			<key>isa</key>
-			<string>PBXFileReference</string>
-			<key>lastKnownFileType</key>
-			<string>sourcecode.swift</string>
-			<key>path</key>
-			<string>NotchShape.swift</string>
 			<key>sourceTree</key>
 			<string>&lt;group&gt;</string>
 		</dict>
@@ -2814,17 +2680,6 @@
 			<key>sourceTree</key>
 			<string>&lt;group&gt;</string>
 		</dict>
-		<key>BB00000000000000000195</key>
-		<dict>
-			<key>isa</key>
-			<string>PBXFileReference</string>
-			<key>lastKnownFileType</key>
-			<string>sourcecode.swift</string>
-			<key>path</key>
-			<string>OverlayIndicatorView.swift</string>
-			<key>sourceTree</key>
-			<string>&lt;group&gt;</string>
-		</dict>
 		<key>BB00000000000000000196</key>
 		<dict>
 			<key>isa</key>
@@ -2833,28 +2688,6 @@
 			<string>sourcecode.swift</string>
 			<key>path</key>
 			<string>IndicatorCoordinator.swift</string>
-			<key>sourceTree</key>
-			<string>&lt;group&gt;</string>
-		</dict>
-		<key>BB00000000000000000197</key>
-		<dict>
-			<key>isa</key>
-			<string>PBXFileReference</string>
-			<key>lastKnownFileType</key>
-			<string>sourcecode.swift</string>
-			<key>path</key>
-			<string>SharedIndicatorComponents.swift</string>
-			<key>sourceTree</key>
-			<string>&lt;group&gt;</string>
-		</dict>
-		<key>BB00000000000000000198</key>
-		<dict>
-			<key>isa</key>
-			<string>PBXFileReference</string>
-			<key>lastKnownFileType</key>
-			<string>sourcecode.swift</string>
-			<key>path</key>
-			<string>OverlayIndicatorPanel.swift</string>
 			<key>sourceTree</key>
 			<string>&lt;group&gt;</string>
 		</dict>
@@ -3019,17 +2852,6 @@
 			<key>sourceTree</key>
 			<string>&lt;group&gt;</string>
 		</dict>
-		<key>BB00000000000000000250</key>
-		<dict>
-			<key>isa</key>
-			<string>PBXFileReference</string>
-			<key>lastKnownFileType</key>
-			<string>sourcecode.swift</string>
-			<key>path</key>
-			<string>AboutSettingsView.swift</string>
-			<key>sourceTree</key>
-			<string>&lt;group&gt;</string>
-		</dict>
 		<key>BB00000000000000000271</key>
 		<dict>
 			<key>isa</key>
@@ -3060,28 +2882,6 @@
 			<string>sourcecode.swift</string>
 			<key>path</key>
 			<string>MediaPlaybackService.swift</string>
-			<key>sourceTree</key>
-			<string>&lt;group&gt;</string>
-		</dict>
-		<key>BB00000000000000000309</key>
-		<dict>
-			<key>isa</key>
-			<string>PBXFileReference</string>
-			<key>lastKnownFileType</key>
-			<string>sourcecode.swift</string>
-			<key>path</key>
-			<string>MinimalIndicatorView.swift</string>
-			<key>sourceTree</key>
-			<string>&lt;group&gt;</string>
-		</dict>
-		<key>BB00000000000000000310</key>
-		<dict>
-			<key>isa</key>
-			<string>PBXFileReference</string>
-			<key>lastKnownFileType</key>
-			<string>sourcecode.swift</string>
-			<key>path</key>
-			<string>MinimalIndicatorPanel.swift</string>
 			<key>sourceTree</key>
 			<string>&lt;group&gt;</string>
 		</dict>
@@ -3588,12 +3388,7 @@
 		<dict>
 			<key>children</key>
 			<array>
-				<string>BB00000000000000000198</string>
-				<string>BB00000000000000000195</string>
-				<string>BB00000000000000000310</string>
-				<string>BB00000000000000000309</string>
 				<string>6C7D8E9F0A1B2C3D4E5F6071</string>
-				<string>BB00000000000000000197</string>
 				<string>BB00000000000000000014</string>
 				<string>BB00000000000000000016</string>
 				<string>533C00000000000000000003</string>
@@ -3609,18 +3404,12 @@
 				<string>BB00000000000000000092</string>
 				<string>BB00000000000000000094</string>
 				<string>B91F00000000000000000001</string>
-				<string>BB00000000000000000120</string>
-				<string>BB00000000000000000901</string>
-				<string>E5A1B2C3D4F5061728394A5C</string>
-				<string>BB00000000000000000121</string>
-				<string>BB00000000000000000122</string>
 				<string>BB00000000000000000127</string>
 				<string>BB00000000000000000207</string>
 				<string>BB00000000000000000240</string>
 				<string>BB00000000000000000245</string>
 				<string>BB00000000000000000248</string>
 				<string>BB00000000000000000249</string>
-				<string>BB00000000000000000250</string>
 				<string>BD00000000000000000001</string>
 				<string>BD00000000000000000003</string>
 				<string>BD00000000000000000005</string>
@@ -3795,9 +3584,7 @@
 				<string>CE5852D6767C5FA955B84C55</string>
 				<string>CE5852D6767C5FA955B84C56</string>
 				<string>2F4D6A8B0C1E3F5A7B9D2C4F</string>
-				<string>2F4D6A8B0C1E3F5A7B9D2C51</string>
 				<string>6A7B8C9D0E1F223344556679</string>
-				<string>E5A1B2C3D4F5061728394A5E</string>
 				<string>604D00000000000000000001</string>
 				<string>533A00000000000000000001</string>
 				<string>533B00000000000000000001</string>
@@ -3937,9 +3724,7 @@
 				<string>24FFE19AC026C48AE32BCD7F</string>
 				<string>24FFE19AC026C48AE32BCD80</string>
 				<string>2F4D6A8B0C1E3F5A7B9D2C4E</string>
-				<string>2F4D6A8B0C1E3F5A7B9D2C50</string>
 				<string>7B8C9D0E1F22334455667790</string>
-				<string>E5A1B2C3D4F5061728394A5D</string>
 				<string>3A4B5C6D7E8F901234567890</string>
 				<string>604D00000000000000000002</string>
 				<string>533A00000000000000000002</string>
@@ -4032,44 +3817,6 @@
 			<string>Leise.app</string>
 			<key>sourceTree</key>
 			<string>BUILT_PRODUCTS_DIR</string>
-		</dict>
-		<key>E5A1B2C3D4F5061728394A5B</key>
-		<dict>
-			<key>fileRef</key>
-			<string>E5A1B2C3D4F5061728394A5C</string>
-			<key>isa</key>
-			<string>PBXBuildFile</string>
-		</dict>
-		<key>E5A1B2C3D4F5061728394A5C</key>
-		<dict>
-			<key>isa</key>
-			<string>PBXFileReference</string>
-			<key>lastKnownFileType</key>
-			<string>sourcecode.swift</string>
-			<key>path</key>
-			<string>NotchIndicatorLayout.swift</string>
-			<key>sourceTree</key>
-			<string>&lt;group&gt;</string>
-		</dict>
-		<key>E5A1B2C3D4F5061728394A5D</key>
-		<dict>
-			<key>fileRef</key>
-			<string>E5A1B2C3D4F5061728394A5E</string>
-			<key>isa</key>
-			<string>PBXBuildFile</string>
-		</dict>
-		<key>E5A1B2C3D4F5061728394A5E</key>
-		<dict>
-			<key>includeInIndex</key>
-			<string>1</string>
-			<key>isa</key>
-			<string>PBXFileReference</string>
-			<key>lastKnownFileType</key>
-			<string>sourcecode.swift</string>
-			<key>path</key>
-			<string>NotchIndicatorLayoutTests.swift</string>
-			<key>sourceTree</key>
-			<string>&lt;group&gt;</string>
 		</dict>
 		<key>E6F8E5940EF4832A7B8D735D</key>
 		<dict>
@@ -4314,11 +4061,6 @@
 				<string>AA00000000000000000094</string>
 				<string>AA00000000000000000093</string>
 				<string>AA00000000000000000119</string>
-				<string>AA00000000000000000120</string>
-				<string>AA00000000000000000901</string>
-				<string>E5A1B2C3D4F5061728394A5B</string>
-				<string>AA00000000000000000121</string>
-				<string>AA00000000000000000122</string>
 				<string>AA00000000000000000095</string>
 				<string>AA00000000000000000096</string>
 				<string>AA00000000000000000102</string>
@@ -4326,11 +4068,6 @@
 				<string>A91F00000000000000000001</string>
 				<string>AA00000000000000000217</string>
 				<string>AA00000000000000000125</string>
-				<string>AA00000000000000000205</string>
-				<string>AA00000000000000000206</string>
-				<string>AA00000000000000000322</string>
-				<string>AA00000000000000000321</string>
-				<string>AA00000000000000000208</string>
 				<string>AA00000000000000000126</string>
 				<string>AA00000000000000000127</string>
 				<string>AA00000000000000000152</string>
@@ -4361,7 +4098,6 @@
 				<string>AA00000000000000000258</string>
 				<string>AA00000000000000000260</string>
 				<string>AA00000000000000000261</string>
-				<string>AA00000000000000000262</string>
 				<string>AA00000000000000000354</string>
 				<string>BD00000000000000000002</string>
 				<string>BD00000000000000000004</string>

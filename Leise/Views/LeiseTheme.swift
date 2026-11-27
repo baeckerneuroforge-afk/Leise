@@ -57,6 +57,12 @@ enum LeiseMotion {
     /// What every animation becomes under Reduce Motion.
     static let reduced = Animation.easeInOut(duration: 0.2)
 
+    /// `shape` as physics, for geometry driven by a display link (the indicator
+    /// pill), so it stays interruptible mid-flight. Same duration and bounce.
+    static let shapeSpring = Spring(duration: 0.28, bounce: 0.12)
+    /// Duration of the crossfade every animation becomes under Reduce Motion.
+    static let reducedDuration: TimeInterval = 0.2
+
     static func adaptive(_ animation: Animation, reduceMotion: Bool) -> Animation {
         reduceMotion ? reduced : animation
     }

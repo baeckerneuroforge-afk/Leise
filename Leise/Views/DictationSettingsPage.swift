@@ -5,7 +5,7 @@ enum DictationTextSettings {
     /// "Füllwörter entfernen". Default on, which is what Leise always did.
     /// Until the post-processing pipeline reads this key the filler-word
     /// cleanup keeps running (see the window workstream's report).
-    static let fillerWordRemovalKey = "fillerWordRemovalEnabled"
+    static let fillerWordRemovalKey = UserDefaultsKeys.fillerWordRemovalEnabled
 }
 
 /// Diktat: the shortcut, language and model, what happens to the text, and

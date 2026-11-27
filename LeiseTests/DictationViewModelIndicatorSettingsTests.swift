@@ -76,11 +76,6 @@ final class DictationViewModelIndicatorSettingsTests: XCTestCase {
         XCTAssertEqual(DictationViewModel.loadIndicatorTranscriptPreviewFontSizeOffset(defaults: defaults), 0)
     }
 
-    func testIndicatorTranscriptPreviewFontSizeDefaultsMatchCurrentStyles() {
-        XCTAssertEqual(DictationViewModel.indicatorTranscriptPreviewFontSize(for: .notch, offset: 0), 12)
-        XCTAssertEqual(DictationViewModel.indicatorTranscriptPreviewFontSize(for: .overlay, offset: 0), 13)
-    }
-
     func testIndicatorStyleDefaultsToThePill() {
         defaults.removeObject(forKey: UserDefaultsKeys.indicatorStyle)
 

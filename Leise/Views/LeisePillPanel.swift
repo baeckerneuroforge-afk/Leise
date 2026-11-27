@@ -260,16 +260,6 @@ struct LeisePillVelocityTracker {
 
 // MARK: - Springs
 
-extension LeiseMotion {
-    /// `LeiseMotion.shape` as physics, for the pill's geometry, which runs on
-    /// a display link so it stays interruptible mid-flight. Same duration and
-    /// bounce as `shape`.
-    static let shapeSpring = Spring(duration: 0.28, bounce: 0.12)
-    /// The plain crossfade every animation becomes under Reduce Motion
-    /// (`LeiseMotion.reduced`).
-    static let reducedDuration: TimeInterval = 0.2
-}
-
 /// One animated value: current value, velocity and target.
 struct LeisePillSpring: Equatable {
     var value: Double
