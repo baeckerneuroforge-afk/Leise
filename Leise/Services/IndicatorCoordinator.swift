@@ -116,61 +116,183 @@ struct IndicatorPresentationData {
     }
 }
 
-/// Coordinates the display of different indicator styles (Notch vs Overlay).
+/// Drives the indicator pill: what it shows, whether it is on screen and on
+/// which display. The pill itself (`LeisePillController`) owns its windows,
+/// motion and drag.
 @MainActor
 final class IndicatorCoordinator {
     private let screenResolver = IndicatorScreenResolver()
-    private let notchPanel: NotchIndicatorPanel
-    private let overlayPanel: OverlayIndicatorPanel
-    private let minimalPanel: MinimalIndicatorPanel
+    private let pill = LeisePillController()
     private var cancellables = Set<AnyCancellable>()
     private var globalMouseMonitor: Any?
     private var deferredRefreshTask: Task<Void, Never>?
     private var isObserving = false
+    private var isRefreshScheduled = false
+    private var previousCancelHandler: (() -> Void)?
 
-    init() {
-        notchPanel = NotchIndicatorPanel(screenResolver: screenResolver)
-        overlayPanel = OverlayIndicatorPanel(screenResolver: screenResolver)
-        minimalPanel = MinimalIndicatorPanel(screenResolver: screenResolver)
-    }
+    /// Screen and fullscreen suppression are only looked up again when the
+    /// context changes, never on the 30 Hz level updates.
+    private var needsScreenResolution = true
+    private var resolvedVisibleFrame: CGRect?
+    private var isSuppressed = false
+    private var lastDisplayMode: NotchIndicatorDisplay?
 
     func startObserving() {
         guard !isObserving else { return }
         isObserving = true
 
         let vm = ServiceContainer.shared.dictationViewModel
+        let recorder = ServiceContainer.shared.audioRecorderViewModel
+        let hotkeys = ServiceContainer.shared.hotkeyService
 
-        // When style changes, dismiss the inactive panel and show the active one
-        vm.$indicatorStyle
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] style in
-                self?.switchStyle(style, vm: vm)
+        pill.onAnchorCommitted = { [weak vm] anchor in
+            vm?.indicatorPillAnchor = anchor
+        }
+        pill.onUndo = { [weak vm] in
+            vm?.undoActionFeedback()
+        }
+        pill.hoverHintProvider = { [weak vm, weak hotkeys] in
+            if hotkeys?.dictationHotkeysPaused == true {
+                return String(localized: "Dictation paused")
             }
-            .store(in: &cancellables)
+            if vm?.canDictate == false {
+                return String(localized: "No speech model loaded")
+            }
+            return LeisePillHotkeyHint.text(
+                hybrid: DictationSettingsHandler.loadHotkeys(for: .hybrid),
+                pushToTalk: DictationSettingsHandler.loadHotkeys(for: .pushToTalk),
+                toggle: DictationSettingsHandler.loadHotkeys(for: .toggle)
+            )
+        }
 
-        // Both panels observe state; the coordinator and panels gate which one is active
-        notchPanel.startObserving()
-        overlayPanel.startObserving()
-        minimalPanel.startObserving()
+        // Esc while the pill is being dragged returns it home instead of
+        // arming the dictation cancel.
+        previousCancelHandler = hotkeys.onCancelPressed
+        hotkeys.onCancelPressed = { [weak self] in
+            guard let self else { return }
+            if pill.cancelDragIfActive() { return }
+            previousCancelHandler?()
+        }
+
+        // Every published change (state, level, feedback, settings) lands
+        // here; refreshes are coalesced to one per run-loop turn.
+        Publishers.MergeMany(
+            vm.objectWillChange.map { _ in () }.eraseToAnyPublisher(),
+            recorder.objectWillChange.map { _ in () }.eraseToAnyPublisher(),
+            hotkeys.$dictationHotkeysPaused.map { _ in () }.eraseToAnyPublisher()
+        )
+        .sink { [weak self] in
+            self?.scheduleRefresh()
+        }
+        .store(in: &cancellables)
+
         startObservingActiveScreenContextChanges()
+        refresh()
     }
 
-    private func switchStyle(_ style: IndicatorStyle, vm: DictationViewModel) {
-        switch style {
-        case .notch:
-            overlayPanel.dismiss()
-            minimalPanel.dismiss()
-            notchPanel.updateVisibility(vm: vm)
-        case .overlay:
-            notchPanel.dismiss()
-            minimalPanel.dismiss()
-            overlayPanel.updateVisibility(vm: vm)
-        case .minimal:
-            notchPanel.dismiss()
-            overlayPanel.dismiss()
-            minimalPanel.updateVisibility(vm: vm)
+    func stopObserving() {
+        guard isObserving else { return }
+        isObserving = false
+        cancellables.removeAll()
+        deferredRefreshTask?.cancel()
+        deferredRefreshTask = nil
+        removeGlobalMouseMonitor()
+        ServiceContainer.shared.hotkeyService.onCancelPressed = previousCancelHandler
+        previousCancelHandler = nil
+        pill.dismiss()
+    }
+
+    // MARK: Refresh
+
+    private func scheduleRefresh() {
+        guard !isRefreshScheduled else { return }
+        isRefreshScheduled = true
+        // objectWillChange fires before the value changes; read it next turn.
+        DispatchQueue.main.async { [weak self] in
+            guard let self else { return }
+            isRefreshScheduled = false
+            refresh()
         }
     }
+
+    private func refresh() {
+        guard isObserving else { return }
+        let vm = ServiceContainer.shared.dictationViewModel
+        let recorder = ServiceContainer.shared.audioRecorderViewModel
+        let hotkeys = ServiceContainer.shared.hotkeyService
+
+        let inputs = LeisePillInputs(
+            dictationState: vm.state,
+            recorderState: recorder.state,
+            isRecordingInputReady: vm.isRecordingInputReady,
+            recorderElapsed: recorder.duration,
+            feedbackMessage: vm.actionFeedbackMessage,
+            feedbackIcon: vm.actionFeedbackIcon,
+            feedbackKind: vm.actionFeedbackKind,
+            feedbackUndoTitle: vm.actionFeedbackUndoTitle,
+            insertionTarget: vm.insertionTarget,
+            cancelWarningMessage: vm.cancelWarningMessage
+        )
+        let content = LeisePillContent.resolve(inputs)
+        pill.model.level.level = Double(
+            content.phase == .listening
+                ? vm.audioLevel
+                : max(recorder.micLevel, recorder.systemLevel)
+        )
+        pill.setContent(content, isDimmed: hotkeys.dictationHotkeysPaused || !vm.canDictate)
+        pill.setAnchor(vm.indicatorPillAnchor)
+
+        let presentation = IndicatorPresentationState.resolve(
+            dictationState: vm.state,
+            recorderState: recorder.state
+        )
+        let shouldShow = IndicatorPresentationState.shouldShow(
+            visibility: vm.notchIndicatorVisibility,
+            presentation: presentation
+        )
+        if vm.notchIndicatorDisplay != lastDisplayMode {
+            lastDisplayMode = vm.notchIndicatorDisplay
+            needsScreenResolution = true
+        }
+
+        guard shouldShow else {
+            pill.dismiss()
+            // Look the display up again the next time the pill appears.
+            needsScreenResolution = true
+            syncGlobalMouseMonitor()
+            return
+        }
+
+        if needsScreenResolution, !pill.isInteracting {
+            needsScreenResolution = false
+            resolveScreen(displayMode: vm.notchIndicatorDisplay)
+        }
+        if let resolvedVisibleFrame, !isSuppressed {
+            pill.present(inVisibleFrame: resolvedVisibleFrame, displayMode: vm.notchIndicatorDisplay)
+        } else {
+            pill.dismiss()
+        }
+        syncGlobalMouseMonitor()
+    }
+
+    private func resolveScreen(displayMode: NotchIndicatorDisplay) {
+        let screens = NSScreen.screens
+        guard !screens.isEmpty else {
+            resolvedVisibleFrame = nil
+            return
+        }
+        // One display: nothing to resolve, and no accessibility queries.
+        let screen = screens.count == 1 ? screens[0] : screenResolver.resolveScreen(for: displayMode)
+        resolvedVisibleFrame = screen.visibleFrame
+        // The pill sits at the bottom, away from the notch strip; only a
+        // Safari fullscreen-like window still needs it hidden.
+        isSuppressed = IndicatorFullscreenSuppressionPolicy.shouldSuppressIndicator(
+            on: screen,
+            placement: .nonNotchArea
+        )
+    }
+
+    // MARK: Context changes
 
     private func startObservingActiveScreenContextChanges() {
         let workspaceCenter = NSWorkspace.shared.notificationCenter
@@ -195,50 +317,16 @@ final class IndicatorCoordinator {
                 self?.scheduleActiveScreenRefreshes()
             }
             .store(in: &cancellables)
-
-        // A global mouse monitor imposes a per-click cost system-wide, so it
-        // is only installed while an indicator panel is actually on screen.
-        // These are the same signals that drive the panels' visibility.
-        let vm = ServiceContainer.shared.dictationViewModel
-        let recorder = ServiceContainer.shared.audioRecorderViewModel
-        Publishers.MergeMany(
-            vm.$state.map { _ in () }.eraseToAnyPublisher(),
-            recorder.$state.map { _ in () }.eraseToAnyPublisher(),
-            vm.$notchIndicatorVisibility.map { _ in () }.eraseToAnyPublisher(),
-            vm.$indicatorStyle.map { _ in () }.eraseToAnyPublisher()
-        )
-        .receive(on: DispatchQueue.main)
-        .sink { [weak self] in
-            // The panels update their visibility on these same events; defer
-            // one runloop turn so the monitor decision sees the settled state.
-            DispatchQueue.main.async {
-                self?.syncGlobalMouseMonitor()
-            }
-            // The notch panel animates its dismissal (~220ms) and stays
-            // visible meanwhile; re-check once the animation has settled so
-            // the monitor doesn't stay installed through idle.
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                self?.syncGlobalMouseMonitor()
-            }
-        }
-        .store(in: &cancellables)
     }
 
-    func stopObserving() {
-        guard isObserving else { return }
-        isObserving = false
-        cancellables.removeAll()
-        deferredRefreshTask?.cancel()
-        deferredRefreshTask = nil
-        removeGlobalMouseMonitor()
-    }
-
-    private var anyIndicatorPanelVisible: Bool {
-        notchPanel.isVisible || overlayPanel.isVisible || minimalPanel.isVisible
-    }
-
+    /// Clicks only move the pill between displays in "active screen" mode
+    /// with more than one display, so the system-wide click monitor exists
+    /// only then, and only while the pill is on screen.
     private func syncGlobalMouseMonitor() {
-        if anyIndicatorPanelVisible {
+        let needsMonitor = pill.isVisible
+            && lastDisplayMode == .activeScreen
+            && NSScreen.screens.count > 1
+        if needsMonitor {
             installGlobalMouseMonitorIfNeeded()
         } else {
             removeGlobalMouseMonitor()
@@ -262,24 +350,26 @@ final class IndicatorCoordinator {
         self.globalMouseMonitor = nil
     }
 
-    private func refreshVisibleIndicatorPanels() {
-        notchPanel.refreshPlacementForActiveContextChange()
-        overlayPanel.refreshPlacementForActiveContextChange()
-        minimalPanel.refreshPlacementForActiveContextChange()
+    private func refreshForActiveContextChange() {
+        // A suppressed pill must come back when the fullscreen window goes.
+        guard isObserving, pill.isVisible || isSuppressed, !pill.isInteracting else { return }
+        needsScreenResolution = true
+        refresh()
+        pill.reassertOnActiveSpace()
     }
 
     private func scheduleActiveScreenRefreshes() {
-        refreshVisibleIndicatorPanels()
+        refreshForActiveContextChange()
 
         deferredRefreshTask?.cancel()
         deferredRefreshTask = Task { @MainActor [weak self] in
             await Task.yield()
             guard !Task.isCancelled else { return }
-            self?.refreshVisibleIndicatorPanels()
+            self?.refreshForActiveContextChange()
 
             try? await Task.sleep(for: .milliseconds(120))
             guard !Task.isCancelled else { return }
-            self?.refreshVisibleIndicatorPanels()
+            self?.refreshForActiveContextChange()
         }
     }
 }

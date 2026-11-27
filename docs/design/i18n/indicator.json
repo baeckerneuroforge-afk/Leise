@@ -1,0 +1,102 @@
+{
+  "Always": {
+    "de": "Immer",
+    "ja": "常に"
+  },
+  "Built-in Screen": {
+    "de": "Integrierter Bildschirm",
+    "ja": "内蔵ディスプレイ"
+  },
+  "Center": {
+    "de": "Mitte",
+    "ja": "中央"
+  },
+  "Couldn't insert text – kept on clipboard": {
+    "de": "Text konnte nicht eingefügt werden – in der Zwischenablage behalten",
+    "ja": "テキストを挿入できませんでした – クリップボードに残しています"
+  },
+  "Dictation indicator, %@": {
+    "de": "Diktat-Indikator, %@",
+    "ja": "ディクテーションインジケーター、%@"
+  },
+  "Dictation paused": {
+    "de": "Diktieren pausiert",
+    "ja": "ディクテーションは一時停止中です"
+  },
+  "Drag the indicator to the left, the center or the right. Leise remembers where you put it.": {
+    "de": "Zieh den Indikator nach links, in die Mitte oder nach rechts. Leise merkt sich den Platz.",
+    "ja": "インジケーターは左・中央・右にドラッグできます。Leise は位置を記憶します。"
+  },
+  "Hold %@ to talk": {
+    "de": "%@ halten zum Sprechen",
+    "ja": "%@ を押したまま話す"
+  },
+  "Inserted in %@": {
+    "de": "In %@ eingefügt",
+    "ja": "%@ に挿入しました"
+  },
+  "Left": {
+    "de": "Links",
+    "ja": "左"
+  },
+  "Leise then shows its status only in the menu bar.": {
+    "de": "Leise zeigt den Status dann nur in der Menüleiste.",
+    "ja": "状態はメニューバーにのみ表示されます。"
+  },
+  "Listening": {
+    "de": "Hört zu",
+    "ja": "聞き取り中"
+  },
+  "No dictation shortcut set": {
+    "de": "Kein Tastenkürzel zum Diktieren festgelegt",
+    "ja": "ディクテーションのショートカットが未設定です"
+  },
+  "No speech detected": {
+    "de": "Keine Sprache erkannt",
+    "ja": "音声が検出されませんでした"
+  },
+  "No speech model loaded": {
+    "de": "Kein Sprachmodell geladen",
+    "ja": "音声モデルが読み込まれていません"
+  },
+  "No speech recognized": {
+    "de": "Keine Sprache erkannt",
+    "ja": "音声を認識できませんでした"
+  },
+  "Only while dictating": {
+    "de": "Nur beim Diktieren",
+    "ja": "ディクテーション中のみ"
+  },
+  "Position: %@": {
+    "de": "Position: %@",
+    "ja": "位置：%@"
+  },
+  "Press %@ to talk": {
+    "de": "%@ drücken zum Sprechen",
+    "ja": "%@ を押して話す"
+  },
+  "Press Esc again to cancel": {
+    "de": "Noch einmal Esc zum Abbrechen",
+    "ja": "もう一度 Esc でキャンセル"
+  },
+  "Preview of the indicator": {
+    "de": "Vorschau des Indikators",
+    "ja": "インジケーターのプレビュー"
+  },
+  "Recording, %@": {
+    "de": "Aufnahme, %@",
+    "ja": "録音中、%@"
+  },
+  "Right": {
+    "de": "Rechts",
+    "ja": "右"
+  },
+  "Screen": {
+    "de": "Bildschirm",
+    "ja": "画面"
+  },
+  "Show": {
+    "de": "Anzeigen",
+    "ja": "表示"
+  }
+}

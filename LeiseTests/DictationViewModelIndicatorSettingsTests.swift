@@ -81,10 +81,10 @@ final class DictationViewModelIndicatorSettingsTests: XCTestCase {
         XCTAssertEqual(DictationViewModel.indicatorTranscriptPreviewFontSize(for: .overlay, offset: 0), 13)
     }
 
-    func testIndicatorStyleDefaultsToNotch() {
+    func testIndicatorStyleDefaultsToThePill() {
         defaults.removeObject(forKey: UserDefaultsKeys.indicatorStyle)
 
-        XCTAssertEqual(DictationViewModel.loadIndicatorStyle(defaults: defaults), .notch)
+        XCTAssertEqual(DictationViewModel.loadIndicatorStyle(defaults: defaults), .minimal)
     }
 
     func testIndicatorStylePersistsMinimal() {
@@ -94,10 +94,37 @@ final class DictationViewModelIndicatorSettingsTests: XCTestCase {
         XCTAssertEqual(DictationViewModel.loadIndicatorStyle(defaults: defaults), .minimal)
     }
 
-    func testUnknownIndicatorStyleFallsBackToNotch() {
+    func testStoredNotchAndOverlayStylesLoadAsThePill() {
+        for legacy in [IndicatorStyle.notch, .overlay] {
+            defaults.set(legacy.rawValue, forKey: UserDefaultsKeys.indicatorStyle)
+
+            XCTAssertEqual(DictationViewModel.loadIndicatorStyle(defaults: defaults), .minimal, "\(legacy)")
+        }
+    }
+
+    func testUnknownIndicatorStyleLoadsAsThePill() {
         defaults.set("mystery", forKey: UserDefaultsKeys.indicatorStyle)
 
-        XCTAssertEqual(DictationViewModel.loadIndicatorStyle(defaults: defaults), .notch)
+        XCTAssertEqual(DictationViewModel.loadIndicatorStyle(defaults: defaults), .minimal)
+    }
+
+    func testIndicatorVisibilityDefaultsToAlways() {
+        XCTAssertEqual(DictationViewModel.loadIndicatorVisibility(defaults: defaults), .always)
+    }
+
+    func testIndicatorVisibilityPersistsEveryOption() {
+        for visibility in NotchIndicatorVisibility.allCases {
+            DictationViewModel.persistIndicatorVisibility(visibility, defaults: defaults)
+
+            XCTAssertEqual(defaults.string(forKey: UserDefaultsKeys.notchIndicatorVisibility), visibility.rawValue)
+            XCTAssertEqual(DictationViewModel.loadIndicatorVisibility(defaults: defaults), visibility)
+        }
+    }
+
+    func testUnknownIndicatorVisibilityFallsBackToAlways() {
+        defaults.set("sometimes", forKey: UserDefaultsKeys.notchIndicatorVisibility)
+
+        XCTAssertEqual(DictationViewModel.loadIndicatorVisibility(defaults: defaults), .always)
     }
 
     func testAggressiveShortSpeechTranscriptionDefaultsToEnabled() {
@@ -1022,57 +1049,66 @@ final class IndicatorPresentationStateTests: XCTestCase {
     }
 }
 
+/// The pill's show / dismiss lifecycle on the real run loop (display link),
+/// complementing the frame-stepped tests in `LeisePillControllerTests`.
 @MainActor
-final class NotchIndicatorPanelLifecycleTests: XCTestCase {
-    func testPlacementRefreshDoesNotCancelInFlightDismissal() async throws {
-        let panel = try makePanel()
-        defer { panel.orderOut(nil) }
+final class LeisePillPanelLifecycleTests: XCTestCase {
+    func testRepeatedDismissDoesNotCancelInFlightDismissal() async throws {
+        let pill = try makePresentedPill()
+        defer { pill.dismiss() }
+        try await Task.sleep(for: .milliseconds(400))
+        XCTAssertTrue(pill.isVisible)
 
-        panel.show()
-        await Task.yield()
-        XCTAssertTrue(panel.isVisible)
+        pill.dismiss()
+        pill.dismiss()
+        try await waitUntil { !pill.isVisible }
 
-        panel.dismiss()
-        panel.refreshPlacementForActiveContextChange()
-        try await Task.sleep(for: .milliseconds(300))
-
-        XCTAssertFalse(panel.isVisible)
+        XCTAssertFalse(pill.isVisible)
+        XCTAssertFalse(pill.hitPanelIsVisible)
     }
 
-    func testShowCancelsInFlightDismissalForNewActivity() async throws {
-        let panel = try makePanel()
-        defer { panel.orderOut(nil) }
+    func testPresentCancelsInFlightDismissalForNewActivity() async throws {
+        let pill = try makePresentedPill()
+        defer { pill.dismiss() }
+        try await Task.sleep(for: .milliseconds(400))
 
-        panel.show()
-        await Task.yield()
-        XCTAssertTrue(panel.isVisible)
+        pill.dismiss()
+        pill.present(inVisibleFrame: try visibleFrame(), displayMode: .activeScreen)
+        try await Task.sleep(for: .milliseconds(500))
 
-        panel.dismiss()
-        panel.show()
-        try await Task.sleep(for: .milliseconds(300))
-
-        XCTAssertTrue(panel.isVisible)
+        XCTAssertTrue(pill.isVisible)
+        XCTAssertTrue(pill.hitPanelIsVisible)
     }
 
-    private func makePanel() throws -> NotchIndicatorPanel {
+    func testThePillSettlesAndStopsAnimating() async throws {
+        let pill = try makePresentedPill()
+        defer { pill.dismiss() }
+
+        try await waitUntil { !pill.isAnimating }
+
+        XCTAssertFalse(pill.isAnimating, "no frame loop while nothing moves")
+        XCTAssertEqual(pill.model.presentationOpacity, 1, accuracy: 0.001)
+    }
+
+    private func visibleFrame() throws -> CGRect {
         guard let screen = NSScreen.screens.first else {
-            throw XCTSkip("Notch indicator panel tests require an available screen")
+            throw XCTSkip("Indicator pill tests require an available screen")
         }
+        return screen.visibleFrame
+    }
 
-        let resolver = IndicatorScreenResolver(
-            focusedElementPositionProvider: { nil },
-            focusedWindowFrameProvider: { nil },
-            frontmostApplicationProvider: { nil },
-            mouseLocationProvider: { CGPoint(x: screen.frame.midX, y: screen.frame.midY) },
-            screensProvider: { [screen] },
-            mainScreenProvider: { screen },
-            windowFrameProvider: { _ in nil }
-        )
-        return NotchIndicatorPanel(
-            screenResolver: resolver,
-            displayModeProvider: { .activeScreen },
-            content: { _ in EmptyView() }
-        )
+    private func makePresentedPill() throws -> LeisePillController {
+        let pill = LeisePillController()
+        pill.pointerLocation = { .zero }
+        pill.present(inVisibleFrame: try visibleFrame(), displayMode: .activeScreen)
+        return pill
+    }
+
+    private func waitUntil(timeout: Duration = .seconds(2), _ condition: () -> Bool) async throws {
+        let deadline = ContinuousClock.now + timeout
+        while !condition(), ContinuousClock.now < deadline {
+            try await Task.sleep(for: .milliseconds(20))
+        }
     }
 }
 

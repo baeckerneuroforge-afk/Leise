@@ -66,12 +66,15 @@ enum UserDefaultsKeys {
     static let historyRetentionDays = "historyRetentionDays"
     static let saveAudioWithHistory = "saveAudioWithHistory"
 
-    // MARK: - Notch Indicator
-    static let overlayPosition = "overlayPosition"
+    // MARK: - Indicator
     static let notchIndicatorVisibility = "notchIndicatorVisibility"
+    static let notchIndicatorDisplay = "notchIndicatorDisplay"
+    /// Where the indicator pill rests along the bottom of the screen (`IndicatorAnchor`).
+    static let indicatorPillAnchor = "indicatorPillAnchor"
+    /// Legacy: the pill always rests at the bottom and shows no side content.
+    static let overlayPosition = "overlayPosition"
     static let notchIndicatorLeftContent = "notchIndicatorLeftContent"
     static let notchIndicatorRightContent = "notchIndicatorRightContent"
-    static let notchIndicatorDisplay = "notchIndicatorDisplay"
 
     // MARK: - Appearance
     static let showMenuBarIcon = "showMenuBarIcon"

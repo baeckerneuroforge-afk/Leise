@@ -114,16 +114,25 @@ final class DictationViewModel: ObservableObject {
     @Published var actionFeedbackMessage: String?
     @Published var actionFeedbackIcon: String?
     @Published var actionFeedbackIsError: Bool = false
+    /// How the indicator presents `actionFeedbackMessage` (check, neutral or red cross).
+    @Published private(set) var actionFeedbackKind: IndicatorFeedbackKind = .info
     @Published var actionFeedbackUndoTitle: String?
     @Published var activeAppIcon: NSImage?
+    /// The app the last dictation was inserted into, shown while `state` is `.inserting`.
+    @Published private(set) var insertionTarget: IndicatorInsertionTarget?
     private var actionDisplayDuration: TimeInterval = 3.5
 
-    @Published var indicatorStyle: IndicatorStyle {
-        didSet { Self.persistIndicatorStyle(indicatorStyle) }
-    }
+    /// The pill is the only indicator. Kept for code that still asks.
+    var indicatorStyle: IndicatorStyle { .minimal }
 
     @Published var notchIndicatorVisibility: NotchIndicatorVisibility {
-        didSet { UserDefaults.standard.set(notchIndicatorVisibility.rawValue, forKey: UserDefaultsKeys.notchIndicatorVisibility) }
+        didSet { Self.persistIndicatorVisibility(notchIndicatorVisibility) }
+    }
+
+    /// Where the pill rests along the bottom of the screen. Dragging the pill
+    /// and the Position control in Darstellung both write it.
+    @Published var indicatorPillAnchor: IndicatorAnchor {
+        didSet { Self.persistIndicatorPillAnchor(indicatorPillAnchor) }
     }
 
     @Published var notchIndicatorLeftContent: NotchIndicatorContent {
@@ -219,12 +228,11 @@ final class DictationViewModel: ObservableObject {
     private var pendingRecordingAudioDuckingLevel: Float?
     private var pendingRecordingAudioDuckingTask: Task<Void, Never>?
 
+    /// Shown inside the indicator after the first Esc; the second Esc cancels.
     var cancelWarningMessage: String? {
         switch (state, cancelWarningTarget) {
-        case (.recording, .recording):
-            return String(localized: "Press Esc again to cancel recording")
-        case (.processing, .processing):
-            return String(localized: "Press Esc again to cancel transcription")
+        case (.recording, .recording), (.processing, .processing):
+            return String(localized: "Press Esc again to cancel")
         default:
             return nil
         }
@@ -313,9 +321,9 @@ final class DictationViewModel: ObservableObject {
         self.mediaPauseEnabled = UserDefaults.standard.bool(forKey: UserDefaultsKeys.mediaPauseEnabled)
         self.transcribeShortQuietClipsAggressively = Self.loadTranscribeShortQuietClipsAggressively()
         self.microphoneBoostEnabled = Self.loadMicrophoneBoostEnabled()
-        self.indicatorStyle = Self.loadIndicatorStyle()
-        self.notchIndicatorVisibility = UserDefaults.standard.string(forKey: UserDefaultsKeys.notchIndicatorVisibility)
-            .flatMap { NotchIndicatorVisibility(rawValue: $0) } ?? .duringActivity
+        Self.migrateLegacyIndicatorSettings()
+        self.notchIndicatorVisibility = Self.loadIndicatorVisibility()
+        self.indicatorPillAnchor = Self.loadIndicatorPillAnchor()
         self.notchIndicatorLeftContent = UserDefaults.standard.string(forKey: UserDefaultsKeys.notchIndicatorLeftContent)
             .flatMap { NotchIndicatorContent(rawValue: $0) } ?? .timer
         self.notchIndicatorRightContent = UserDefaults.standard.string(forKey: UserDefaultsKeys.notchIndicatorRightContent)
@@ -351,7 +359,15 @@ final class DictationViewModel: ObservableObject {
             // palette insert that finishes after a dictation began must not
             // clobber that dictation's state.
             guard !isStartInFlight, state != .recording, state != .processing else { return }
-            showNotchFeedback(message: message, icon: icon, duration: duration, isError: isError, errorCategory: category ?? "general")
+            let kind: IndicatorFeedbackKind = isError ? .error : (icon == "checkmark.circle.fill" ? .success : .info)
+            showNotchFeedback(
+                message: message,
+                icon: icon,
+                duration: duration,
+                isError: isError,
+                errorCategory: category ?? "general",
+                kind: kind
+            )
         }
         recentTranscriptionPaletteHandler.getPreserveClipboard = { [weak self] in
             self?.preserveClipboard ?? false
@@ -394,13 +410,54 @@ final class DictationViewModel: ObservableObject {
         defaults.set(Self.clampedIndicatorTranscriptPreviewFontSizeOffset(offset), forKey: UserDefaultsKeys.indicatorTranscriptPreviewFontSizeOffset)
     }
 
-    nonisolated static func loadIndicatorStyle(defaults: UserDefaults = .standard) -> IndicatorStyle {
-        defaults.string(forKey: UserDefaultsKeys.indicatorStyle)
-            .flatMap { IndicatorStyle(rawValue: $0) } ?? .notch
+    /// Every stored style resolves to the pill; the notch and overlay
+    /// indicators no longer exist.
+    nonisolated static func loadIndicatorStyle(defaults _: UserDefaults = .standard) -> IndicatorStyle {
+        .minimal
     }
 
     nonisolated static func persistIndicatorStyle(_ style: IndicatorStyle, defaults: UserDefaults = .standard) {
         defaults.set(style.rawValue, forKey: UserDefaultsKeys.indicatorStyle)
+    }
+
+    /// Moves settings from the notch / overlay / minimal era onto the pill.
+    /// Idempotent; runs on every launch.
+    ///
+    /// - A stored notch or overlay style becomes the pill (`.minimal`).
+    /// - The top/bottom position no longer applies: the pill always rests
+    ///   at the bottom, so the key is dropped.
+    /// - Left/right content, the live transcript and its font size stay
+    ///   stored but no longer affect the indicator.
+    nonisolated static func migrateLegacyIndicatorSettings(defaults: UserDefaults = .standard) {
+        if let storedStyle = defaults.string(forKey: UserDefaultsKeys.indicatorStyle),
+           storedStyle != IndicatorStyle.minimal.rawValue {
+            persistIndicatorStyle(.minimal, defaults: defaults)
+        }
+        if defaults.object(forKey: UserDefaultsKeys.overlayPosition) != nil {
+            defaults.removeObject(forKey: UserDefaultsKeys.overlayPosition)
+        }
+    }
+
+    /// "Immer" is the default: the quiet idle bar is part of the product.
+    nonisolated static func loadIndicatorVisibility(defaults: UserDefaults = .standard) -> NotchIndicatorVisibility {
+        defaults.string(forKey: UserDefaultsKeys.notchIndicatorVisibility)
+            .flatMap { NotchIndicatorVisibility(rawValue: $0) } ?? .always
+    }
+
+    nonisolated static func persistIndicatorVisibility(
+        _ visibility: NotchIndicatorVisibility,
+        defaults: UserDefaults = .standard
+    ) {
+        defaults.set(visibility.rawValue, forKey: UserDefaultsKeys.notchIndicatorVisibility)
+    }
+
+    nonisolated static func loadIndicatorPillAnchor(defaults: UserDefaults = .standard) -> IndicatorAnchor {
+        defaults.string(forKey: UserDefaultsKeys.indicatorPillAnchor)
+            .flatMap { IndicatorAnchor(rawValue: $0) } ?? .center
+    }
+
+    nonisolated static func persistIndicatorPillAnchor(_ anchor: IndicatorAnchor, defaults: UserDefaults = .standard) {
+        defaults.set(anchor.rawValue, forKey: UserDefaultsKeys.indicatorPillAnchor)
     }
 
     nonisolated static func loadTranscribeShortQuietClipsAggressively(defaults: UserDefaults = .standard) -> Bool {
@@ -666,7 +723,6 @@ final class DictationViewModel: ObservableObject {
                 guard self.state == .recording, !self.isStopInFlight else { return }
                 let errorMessage = error.localizedDescription
                 self.abortActiveRecordingImmediately(sessionMessage: errorMessage, preserveRecoveryAudio: true)
-                self.accessibilityAnnouncementService.announceError(errorMessage)
                 self.showError(errorMessage, category: "recording")
             }
             .store(in: &cancellables)
@@ -711,6 +767,9 @@ final class DictationViewModel: ObservableObject {
             cancelCurrentOperation()
         } else {
             cancelWarningTarget = target
+            if let cancelWarningMessage {
+                accessibilityAnnouncementService.announce(cancelWarningMessage)
+            }
         }
     }
 
@@ -744,7 +803,7 @@ final class DictationViewModel: ObservableObject {
         if isStartInFlight {
             pendingCancelRequestedDuringStart = true
             pendingStopRequestedDuringStart = false
-            showNotchFeedback(message: cancelledMessage, icon: "xmark.circle", duration: 1.5)
+            showNotchFeedback(message: cancelledMessage, icon: "xmark.circle", duration: 1.5, kind: .cancelled)
             return
         }
 
@@ -752,7 +811,7 @@ final class DictationViewModel: ObservableObject {
         case .recording:
             guard !isStopInFlight else { return }
             abortActiveRecordingImmediately(sessionMessage: cancelledMessage)
-            showNotchFeedback(message: cancelledMessage, icon: "xmark.circle", duration: 1.5)
+            showNotchFeedback(message: cancelledMessage, icon: "xmark.circle", duration: 1.5, kind: .cancelled)
         case .processing:
             if pendingStartAfterProcessing != nil {
                 // The queued start's hotkey is still active; resync it so the
@@ -771,7 +830,7 @@ final class DictationViewModel: ObservableObject {
             transcriptionTask?.cancel()
             transcriptionTask = nil
             audioRecordingService.discardActiveRecoveryRecording()
-            showNotchFeedback(message: cancelledMessage, icon: "xmark.circle", duration: 1.5)
+            showNotchFeedback(message: cancelledMessage, icon: "xmark.circle", duration: 1.5, kind: .cancelled)
         default:
             break
         }
@@ -961,7 +1020,7 @@ final class DictationViewModel: ObservableObject {
                 pendingStopRequestedDuringStart = false
                 let cancelledMessage = String(localized: "Cancelled")
                 abortActiveRecordingImmediately(sessionMessage: cancelledMessage)
-                showNotchFeedback(message: cancelledMessage, icon: "xmark.circle", duration: 1.5)
+                showNotchFeedback(message: cancelledMessage, icon: "xmark.circle", duration: 1.5, kind: .cancelled)
             } else if pendingStopRequestedDuringStart {
                 pendingStopRequestedDuringStart = false
                 stopDictation()
@@ -987,7 +1046,6 @@ final class DictationViewModel: ObservableObject {
             } else {
                 errorMessage = error.localizedDescription
             }
-            accessibilityAnnouncementService.announceError(errorMessage)
             failDictationSession(id: sessionID, error: errorMessage)
             showError(errorMessage, category: "recording")
             hotkeyService.cancelDictation()
@@ -1163,7 +1221,8 @@ final class DictationViewModel: ObservableObject {
             showNotchFeedback(
                 message: discardMessage,
                 icon: "xmark.circle",
-                duration: 1.8
+                duration: 1.8,
+                kind: .cancelled
             )
             return
         }
@@ -1212,7 +1271,8 @@ final class DictationViewModel: ObservableObject {
             showNotchFeedback(
                 message: errorMessage,
                 icon: "waveform.badge.exclamationmark",
-                duration: 1.8
+                duration: 1.8,
+                kind: .error
             )
             return
         case .discardNoSpeech:
@@ -1226,7 +1286,8 @@ final class DictationViewModel: ObservableObject {
             showNotchFeedback(
                 message: errorMessage,
                 icon: "mic.slash",
-                duration: 2.0
+                duration: 2.0,
+                kind: .error
             )
             return
         case .transcribe:
@@ -1291,7 +1352,8 @@ final class DictationViewModel: ObservableObject {
                     showNotchFeedback(
                         message: errorMessage,
                         icon: "text.magnifyingglass",
-                        duration: 2.0
+                        duration: 2.0,
+                        kind: .error
                     )
                     soundService.play(.error, enabled: soundFeedbackEnabled)
                     return
@@ -1399,9 +1461,10 @@ final class DictationViewModel: ObservableObject {
                     audioRecordingService.preserveActiveRecoveryRecording()
                     soundService.play(.error, enabled: soundFeedbackEnabled)
                     showNotchFeedback(
-                        message: String(localized: "Couldn't insert text — kept on clipboard"),
+                        message: String(localized: "Couldn't insert text – kept on clipboard"),
                         icon: "doc.on.clipboard",
-                        duration: 3.0
+                        duration: 3.0,
+                        kind: .error
                     )
                 } else if insertionUnverified {
                     // Ambiguous: the app exposes no AX text state (terminals,
@@ -1439,6 +1502,12 @@ final class DictationViewModel: ObservableObject {
                 lastTranscribedText = text
                 lastTranscriptionLanguage = detectedLang
 
+                if !insertionFailed {
+                    insertionTarget = IndicatorInsertionTarget(
+                        appName: activeApp.name,
+                        bundleIdentifier: activeApp.bundleId
+                    )
+                }
                 state = .inserting
                 insertingResetTask?.cancel()
                 let resetDelay: Duration = actionFeedbackMessage != nil ? .seconds(actionDisplayDuration) : .seconds(1.5)
@@ -1453,7 +1522,6 @@ final class DictationViewModel: ObservableObject {
                 if let sessionID {
                     failDictationSession(id: sessionID, error: error.localizedDescription)
                 }
-                accessibilityAnnouncementService.announceError(error.localizedDescription)
                 showError(error.localizedDescription, category: "transcription")
                 clearActiveRuleState()
                 capturedActiveApp = nil
@@ -1586,6 +1654,8 @@ final class DictationViewModel: ObservableObject {
         actionFeedbackMessage = nil
         actionFeedbackIcon = nil
         actionFeedbackIsError = false
+        actionFeedbackKind = .info
+        insertionTarget = nil
         clearPendingUndoActionFeedback()
         actionDisplayDuration = 3.5
     }
@@ -1742,17 +1812,25 @@ final class DictationViewModel: ObservableObject {
         clearPendingUndoActionFeedback()
     }
 
+    /// Shows a feedback message in the indicator pill and announces it to
+    /// VoiceOver. `kind` picks the pill's glyph (check, neutral or red cross);
+    /// it defaults to `.error` for logged errors and `.info` otherwise.
+    /// `isError` only controls the error log.
     private func showNotchFeedback(
         message: String,
         icon: String,
         duration: TimeInterval = 2.5,
         isError: Bool = false,
         errorCategory: String = "general",
-        undoTitle: String? = nil
+        undoTitle: String? = nil,
+        kind: IndicatorFeedbackKind? = nil
     ) {
+        let resolvedKind = kind ?? (isError ? .error : .info)
         actionFeedbackMessage = message
         actionFeedbackIcon = icon
         actionFeedbackIsError = isError
+        actionFeedbackKind = resolvedKind
+        insertionTarget = nil
         if undoTitle == nil {
             clearPendingUndoActionFeedback()
         } else {
@@ -1763,6 +1841,11 @@ final class DictationViewModel: ObservableObject {
 
         if isError {
             errorLogService.addEntry(message: message, category: errorCategory)
+        }
+        if resolvedKind == .error {
+            accessibilityAnnouncementService.announceError(message)
+        } else {
+            accessibilityAnnouncementService.announce(message)
         }
 
         insertingResetTask?.cancel()
