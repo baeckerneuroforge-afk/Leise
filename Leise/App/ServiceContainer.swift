@@ -215,9 +215,9 @@ final class ServiceContainer: ObservableObject {
             postProcessors: builtInComponents.postProcessors,
             usageStatisticsRecorder: usageStatisticsService,
             openRecoverySettings: { openSettingsWindow in
-                SettingsNavigationCoordinator.shared.navigate(to: .dictationRecovery)
+                SettingsNavigationCoordinator.shared.showRecovery()
                 if openSettingsWindow {
-                    ManagedAppWindowOpener.shared.open(id: "settings")
+                    LeiseWindowNavigator.openMainWindow()
                 }
             }
         )

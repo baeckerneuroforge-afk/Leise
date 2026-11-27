@@ -41,59 +41,313 @@ enum DockIconVisibility {
     }
 }
 
-enum MenuBarIconState: Equatable {
-    case idle
-    case dictating
-    case recording
+/// What the menu bar glyph shows. Every state changes the shape, never only
+/// the color: moving bars while dictating, a wave while writing, and a dot
+/// while the recorder runs.
+struct MenuBarGlyphStyle: Equatable {
+    enum Bars: Equatable {
+        case resting
+        /// Bars follow the voice level.
+        case live
+        /// A crest travels across the bars.
+        case wave
+        /// Reduce Motion: a distinct still shape for listening.
+        case listeningStill
+        /// Reduce Motion: a distinct still shape for writing.
+        case waveStill
+    }
+
+    enum Tint: Equatable {
+        /// A template image in the menu bar's own color.
+        case template
+        /// Microphone Orange: dictation is listening.
+        case live
+        /// Record Red: the recorder is running.
+        case record
+    }
+
+    var bars: Bars
+    var tint: Tint
+    var showsRecordingDot: Bool
+
+    static let idle = MenuBarGlyphStyle(bars: .resting, tint: .template, showsRecordingDot: false)
 
     static func resolve(
         dictationState: DictationViewModel.State,
-        recorderState: AudioRecorderViewModel.RecorderState
-    ) -> MenuBarIconState {
-        // The recorder runs long sessions, so it wins when both are active.
-        if recorderState == .recording { return .recording }
-        if dictationState == .recording { return .dictating }
-        return .idle
+        recorderState: AudioRecorderViewModel.RecorderState,
+        reduceMotion: Bool
+    ) -> MenuBarGlyphStyle {
+        let recorderRunning = recorderState == .recording
+        let quietTint: Tint = recorderRunning ? .record : .template
+        switch dictationState {
+        case .recording:
+            return MenuBarGlyphStyle(bars: reduceMotion ? .listeningStill : .live, tint: .live, showsRecordingDot: recorderRunning)
+        case .processing:
+            return MenuBarGlyphStyle(bars: reduceMotion ? .waveStill : .wave, tint: quietTint, showsRecordingDot: recorderRunning)
+        case .idle, .inserting, .error:
+            return MenuBarGlyphStyle(bars: .resting, tint: quietTint, showsRecordingDot: recorderRunning)
+        }
     }
 
-    /// Orange while dictating, red while the recorder captures; idle keeps
-    /// the template artwork so it follows the menu bar appearance.
-    var tintColor: NSColor? {
-        switch self {
-        case .idle: nil
-        case .dictating: .systemOrange
-        case .recording: .systemRed
+    /// Only these tick; everything else is a still image.
+    var animates: Bool {
+        bars == .live || bars == .wave
+    }
+
+    var isTemplate: Bool {
+        tint == .template && !showsRecordingDot
+    }
+
+    /// Heights for the still states, or the starting frame of a moving one.
+    var stillHeights: [CGFloat] {
+        switch bars {
+        case .resting, .live: LeiseMarkShape.restingHeights
+        case .listeningStill: LeiseMarkShape.listeningHeights
+        case .wave: LeiseMarkShape.waveHeights(time: 0)
+        case .waveStill: MenuBarLogoMarkImage.writingStillHeights
         }
+    }
+}
+
+/// Draws the menu bar glyph from the Leise mark's geometry.
+enum MenuBarLogoMarkImage {
+    /// The mark's slot. 1.37 × the 14 pt mark is about 19 pt wide.
+    static let markSize = CGSize(width: 20, height: 18)
+    static let dotDiameter: CGFloat = 5
+    static let dotSpacing: CGFloat = 2
+    /// Keeps the bars clear of the menu bar's edges, as LeiseMarkShape.image does.
+    private static let verticalInsetRatio: CGFloat = 0.11
+    /// Even, mid-height bars: "writing" without motion.
+    static let writingStillHeights: [CGFloat] = Array(repeating: 0.6, count: LeiseMarkShape.barCount)
+
+    static func size(showsRecordingDot: Bool) -> CGSize {
+        guard showsRecordingDot else { return markSize }
+        return CGSize(width: markSize.width + dotSpacing + dotDiameter, height: markSize.height)
+    }
+
+    static func barRects(in rect: CGRect, heights: [CGFloat] = LeiseMarkShape.restingHeights) -> [CGRect] {
+        LeiseMarkShape.barRects(in: rect.insetBy(dx: 0, dy: rect.height * verticalInsetRatio), heights: heights)
+    }
+
+    static func image(style: MenuBarGlyphStyle, heights: [CGFloat]? = nil) -> NSImage {
+        let heights = heights ?? style.stillHeights
+        let barColor: NSColor = switch style.tint {
+        case .template: .black
+        case .live: LeiseColor.liveNS
+        case .record: LeiseColor.recordNS
+        }
+        let showsDot = style.showsRecordingDot
+        let image = NSImage(size: size(showsRecordingDot: showsDot), flipped: false) { bounds in
+            barColor.setFill()
+            let markRect = CGRect(x: bounds.minX, y: bounds.minY, width: markSize.width, height: bounds.height)
+            for bar in barRects(in: markRect, heights: heights) {
+                NSBezierPath(roundedRect: bar, xRadius: bar.width / 2, yRadius: bar.width / 2).fill()
+            }
+            if showsDot {
+                LeiseColor.recordNS.setFill()
+                NSBezierPath(ovalIn: CGRect(
+                    x: markRect.maxX + dotSpacing,
+                    y: bounds.midY - dotDiameter / 2,
+                    width: dotDiameter,
+                    height: dotDiameter
+                )).fill()
+            }
+            return true
+        }
+        image.isTemplate = style.isTemplate
+        return image
+    }
+}
+
+/// Feeds the menu bar label. It ticks at most 20 times a second and only
+/// while the bars move; idle, it holds one still image.
+@MainActor
+final class MenuBarGlyphModel: ObservableObject {
+    @Published private(set) var image: NSImage
+    @Published private(set) var isTemplate: Bool
+    @Published private(set) var stateDescription: String
+
+    private let dictation: DictationViewModel
+    private let announcer: AccessibilityAnnouncementService
+    private var dictationState: DictationViewModel.State
+    private var recorderState: AudioRecorderViewModel.RecorderState
+    private var reduceMotion: Bool
+    private var style: MenuBarGlyphStyle
+    private var timer: Timer?
+    private var smoothedLevel = 0.0
+    private var lastHeights: [CGFloat] = []
+    private var cancellables = Set<AnyCancellable>()
+
+    static let frameInterval: TimeInterval = 1.0 / 20
+    /// The level rises quickly and falls slowly, like a VU meter.
+    private static let attack = 0.55
+    private static let release = 0.18
+    /// Height changes below this are not worth a new image.
+    private static let heightResolution: CGFloat = 0.02
+
+    init(
+        dictation: DictationViewModel = ServiceContainer.shared.dictationViewModel,
+        recorder: AudioRecorderViewModel = ServiceContainer.shared.audioRecorderViewModel,
+        announcer: AccessibilityAnnouncementService = ServiceContainer.shared.accessibilityAnnouncementService
+    ) {
+        self.dictation = dictation
+        self.announcer = announcer
+        dictationState = dictation.state
+        recorderState = recorder.state
+        reduceMotion = LeiseMotion.systemReduceMotion
+        style = MenuBarGlyphStyle.resolve(
+            dictationState: dictation.state,
+            recorderState: recorder.state,
+            reduceMotion: LeiseMotion.systemReduceMotion
+        )
+        image = MenuBarLogoMarkImage.image(style: style)
+        isTemplate = style.isTemplate
+        stateDescription = Self.describe(dictationState: dictation.state, recorderState: recorder.state)
+
+        dictation.$state
+            .removeDuplicates()
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] state in
+                MainActor.assumeIsolated {
+                    self?.dictationState = state
+                    self?.update()
+                }
+            }
+            .store(in: &cancellables)
+
+        recorder.$state
+            .removeDuplicates()
+            .dropFirst()
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] state in
+                MainActor.assumeIsolated {
+                    self?.recorderStateDidChange(to: state)
+                }
+            }
+            .store(in: &cancellables)
+
+        NSWorkspace.shared.notificationCenter
+            .publisher(for: NSWorkspace.accessibilityDisplayOptionsDidChangeNotification)
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                MainActor.assumeIsolated {
+                    self?.reduceMotion = LeiseMotion.systemReduceMotion
+                    self?.update()
+                }
+            }
+            .store(in: &cancellables)
+
+        update()
+    }
+
+    isolated deinit {
+        timer?.invalidate()
+    }
+
+    private func recorderStateDidChange(to state: AudioRecorderViewModel.RecorderState) {
+        let wasRunning = recorderState == .recording
+        recorderState = state
+        let isRunning = state == .recording
+        if isRunning != wasRunning {
+            announcer.announce(isRunning ? String(localized: "Recorder running") : String(localized: "Recorder stopped"))
+        }
+        update()
+    }
+
+    private func update() {
+        let newStyle = MenuBarGlyphStyle.resolve(
+            dictationState: dictationState,
+            recorderState: recorderState,
+            reduceMotion: reduceMotion
+        )
+        let styleChanged = newStyle != style
+        style = newStyle
+        let description = Self.describe(dictationState: dictationState, recorderState: recorderState)
+        if description != stateDescription { stateDescription = description }
+
+        if style.animates {
+            startTicking()
+            if styleChanged { render(heights: style.stillHeights, force: true) }
+        } else {
+            stopTicking()
+            render(heights: style.stillHeights, force: styleChanged)
+        }
+    }
+
+    private func startTicking() {
+        guard timer == nil else { return }
+        smoothedLevel = 0
+        let timer = Timer(timeInterval: Self.frameInterval, repeats: true) { [weak self] _ in
+            // Scheduled on the main run loop below.
+            MainActor.assumeIsolated {
+                self?.tick()
+            }
+        }
+        RunLoop.main.add(timer, forMode: .common)
+        self.timer = timer
+    }
+
+    private func stopTicking() {
+        timer?.invalidate()
+        timer = nil
+        smoothedLevel = 0
+    }
+
+    private func tick() {
+        let time = Date.timeIntervalSinceReferenceDate
+        switch style.bars {
+        case .live:
+            let level = Double(dictation.audioLevel)
+            let rate = level > smoothedLevel ? Self.attack : Self.release
+            smoothedLevel += (level - smoothedLevel) * rate
+            render(heights: LeiseMarkShape.liveHeights(level: smoothedLevel, time: time))
+        case .wave:
+            render(heights: LeiseMarkShape.waveHeights(time: time))
+        case .resting, .listeningStill, .waveStill:
+            stopTicking()
+        }
+    }
+
+    /// Publishes a new image only when the bars visibly moved or the style
+    /// changed, so a quiet voice does not cost a redraw every frame.
+    private func render(heights: [CGFloat], force: Bool = false) {
+        let quantized = heights.map { ($0 / Self.heightResolution).rounded() * Self.heightResolution }
+        guard force || quantized != lastHeights else { return }
+        lastHeights = quantized
+        image = MenuBarLogoMarkImage.image(style: style, heights: quantized)
+        if style.isTemplate != isTemplate { isTemplate = style.isTemplate }
+    }
+
+    static func describe(
+        dictationState: DictationViewModel.State,
+        recorderState: AudioRecorderViewModel.RecorderState
+    ) -> String {
+        var parts: [String] = []
+        switch dictationState {
+        case .recording: parts.append(String(localized: "Listening…"))
+        case .processing: parts.append(String(localized: "Writing…"))
+        case .idle, .inserting, .error: break
+        }
+        if recorderState == .recording {
+            parts.append(String(localized: "Recorder running"))
+        }
+        return parts.isEmpty ? String(localized: "Idle") : parts.joined(separator: ", ")
     }
 }
 
 private struct MenuBarExtraLabel: View {
     @Environment(\.openWindow) private var openWindow
-    @ObservedObject private var dictation = ServiceContainer.shared.dictationViewModel
-    @ObservedObject private var recorder = ServiceContainer.shared.audioRecorderViewModel
+    @StateObject private var glyph = MenuBarGlyphModel()
 
     private var title: String {
         AppConstants.isDevelopment ? "Leise Dev" : "Leise"
     }
 
-    private var iconState: MenuBarIconState {
-        MenuBarIconState.resolve(
-            dictationState: dictation.state,
-            recorderState: recorder.state
-        )
-    }
-
     var body: some View {
-        Image(nsImage: MenuBarLogoMarkImage.image(for: iconState))
-            .resizable()
-            .renderingMode(iconState == .idle ? .template : .original)
-            .frame(width: 18, height: 18)
+        Image(nsImage: glyph.image)
+            .renderingMode(glyph.isTemplate ? .template : .original)
             .accessibilityLabel(Text(verbatim: title))
-            .accessibilityValue(
-                iconState != .idle
-                    ? Text(String(localized: "Recording..."))
-                    : Text(String(localized: "Idle"))
-            )
+            .accessibilityValue(Text(glyph.stateDescription))
             .onAppear {
                 ManagedAppWindowOpener.shared.openWindow = openWindow
             }
@@ -116,51 +370,39 @@ private struct ManagedWindowOpenerRegistrar: View {
     }
 }
 
-enum MenuBarLogoMarkImage {
-    static let size = CGSize(width: 18, height: 18)
-    private static let relativeBarHeights: [CGFloat] = LeiseMarkShape.restingHeights
+/// Opens the main window on a page. Callers name the destination; the
+/// coordinator maps it to the window's pages.
+@MainActor
+enum LeiseWindowNavigator {
+    /// The main window keeps its original identifier, so saved frames and
+    /// AppKit lookups still match.
+    static let mainWindowID = "settings"
+    static let setupWindowID = "setup"
 
-    static func image(for state: MenuBarIconState) -> NSImage {
-        let image = NSImage(size: size)
-        image.lockFocus()
-
-        NSGraphicsContext.current?.shouldAntialias = true
-        (state.tintColor ?? NSColor.black).setFill()
-
-        for rect in barRects(in: CGRect(origin: .zero, size: size)) {
-            NSBezierPath(
-                roundedRect: rect,
-                xRadius: rect.width / 2,
-                yRadius: rect.width / 2
-            ).fill()
-        }
-
-        image.unlockFocus()
-        image.isTemplate = state.tintColor == nil
-        return image
+    /// "Leise öffnen": the overview.
+    static func openOverview() {
+        SettingsNavigationCoordinator.shared.showOverview()
+        openMainWindow()
     }
 
-    static func barRects(in rect: CGRect) -> [CGRect] {
-        let side = min(rect.width, rect.height) * 0.875
-        let barWidth = side / 7
-        let spacing = barWidth / 2
-        let totalWidth = (barWidth * CGFloat(relativeBarHeights.count))
-            + (spacing * CGFloat(relativeBarHeights.count - 1))
-        var x = rect.midX - (totalWidth / 2)
+    /// "Einstellungen …" (⌘,): straight to Diktat.
+    static func openDictationSettings() {
+        SettingsNavigationCoordinator.shared.showDictationSettings()
+        openMainWindow()
+    }
 
-        return relativeBarHeights.map { relativeHeight in
-            let height = side * relativeHeight
-            defer {
-                x += barWidth + spacing
-            }
+    static func openHistory() {
+        SettingsNavigationCoordinator.shared.showHistory()
+        openMainWindow()
+    }
 
-            return CGRect(
-                x: x,
-                y: rect.midY - (height / 2),
-                width: barWidth,
-                height: height
-            )
-        }
+    static func openRecovery() {
+        SettingsNavigationCoordinator.shared.showRecovery()
+        openMainWindow()
+    }
+
+    static func openMainWindow() {
+        ManagedAppWindowOpener.shared.open(id: mainWindowID)
     }
 }
 
@@ -180,30 +422,33 @@ struct LeiseApp: App {
         }
         .menuBarExtraStyle(.menu)
         .commands {
-            CommandGroup(after: .appInfo) {
+            CommandGroup(replacing: .appInfo) {
+                Button(String(localized: "About Leise")) {
+                    LeiseAboutPanel.show()
+                }
                 ManagedWindowOpenerRegistrar()
+            }
+            CommandGroup(replacing: .appSettings) {
+                Button(String(localized: "Settings…")) {
+                    LeiseWindowNavigator.openDictationSettings()
+                }
+                .keyboardShortcut(",")
             }
         }
 
-        settingsScene
+        mainWindowScene
 
-        Window(String(localized: "Leise Setup"), id: "setup") {
+        Window(String(localized: "Leise Setup"), id: LeiseWindowNavigator.setupWindowID) {
             setupContent
         }
         .windowStyle(.hiddenTitleBar)
         .windowResizability(.contentSize)
-        .defaultSize(width: 820, height: 560)
-
-        Window(String(localized: "History"), id: "history") {
-            historyContent
-        }
-        .windowResizability(.contentMinSize)
-        .defaultSize(width: 900, height: 500)
-
+        .defaultSize(SetupWizardView.windowSize)
     }
 
-    private var settingsScene: some Scene {
-        Window(String(localized: "Settings"), id: "settings") {
+    /// The app's one window. History, recovery and settings are pages in it.
+    private var mainWindowScene: some Scene {
+        Window(String(localized: "Leise"), id: LeiseWindowNavigator.mainWindowID) {
             settingsContent
         }
         .windowResizability(.contentMinSize)
@@ -234,15 +479,6 @@ struct LeiseApp: App {
             EmptyView()
         } else {
             SetupWizardView()
-        }
-    }
-
-    @ViewBuilder
-    private var historyContent: some View {
-        if AppConstants.isRunningTests {
-            EmptyView()
-        } else {
-            HistoryView()
         }
     }
 
@@ -511,11 +747,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, SPUUpdaterDelegate {
     }
 
     private func openSettingsWindow() {
-        ManagedAppWindowOpener.shared.open(id: "settings")
+        LeiseWindowNavigator.openMainWindow()
     }
 
     private func openSetupWindow() {
-        ManagedAppWindowOpener.shared.open(id: "setup")
+        ManagedAppWindowOpener.shared.open(id: LeiseWindowNavigator.setupWindowID)
     }
 
     private func handleIncomingURL(_ url: URL) {
@@ -524,17 +760,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, SPUUpdaterDelegate {
 
     private func isManagedWindow(_ window: NSWindow) -> Bool {
         if let identifier = window.identifier?.rawValue.lowercased() {
-            if identifier.contains("settings")
-                || identifier.contains("setup")
-                || identifier.contains("history") {
+            if identifier.contains(LeiseWindowNavigator.mainWindowID)
+                || identifier.contains(LeiseWindowNavigator.setupWindowID) {
                 return true
             }
         }
 
         let title = window.title
-        return title == String(localized: "Settings")
+        return title == String(localized: "Leise")
             || title == String(localized: "Leise Setup")
-            || title == String(localized: "History")
     }
 
     private var hasVisibleManagedWindow: Bool {

@@ -834,58 +834,39 @@ final class DockIconVisibilityTests: XCTestCase {
 }
 
 final class MenuBarGroupingTests: XCTestCase {
-    func testHotkeyStatusListsEveryConfiguredDictationTriggerInModeOrder() {
-        let statuses = MenuBarHotkeyStatus.current { slot in
-            switch slot {
-            case .hybrid:
-                [
-                    UnifiedHotkey(keyCode: 0, modifierFlags: 0, isFn: true),
-                    UnifiedHotkey(keyCode: 0, modifierFlags: NSEvent.ModifierFlags.command.rawValue, isFn: false),
-                ]
-            case .toggle:
-                [UnifiedHotkey(keyCode: 11, modifierFlags: NSEvent.ModifierFlags.control.rawValue, isFn: false)]
-            case .pushToTalk, .recentTranscriptions, .copyLastTranscription, .recorderToggle:
-                []
-            }
-        }
-
-        XCTAssertEqual(statuses.map(\.slot), [.hybrid, .toggle])
-        XCTAssertEqual(statuses.map(\.shortcuts), [["Fn", "⌘A"], ["⌃B"]])
-        XCTAssertEqual(statuses.map(\.text), ["Hybrid: Fn, ⌘A", "Toggle: ⌃B"])
-    }
-
-    func testHotkeyStatusIsEmptyWhenNoDictationTriggerIsConfigured() {
-        XCTAssertTrue(MenuBarHotkeyStatus.current { _ in [] }.isEmpty)
-    }
-
-    func testMenuBarSectionsUseExpectedOrderAndLocalizedKeys() {
+    func testMenuBarListsStatusFirstThenItemsByUse() {
         XCTAssertEqual(
-            MenuBarMenuSection.allCases.map(\.titleLocalizationKey),
-            ["General", "Recorder", "Transcription", "Updates"]
+            MenuBarMenuLayout.items(hasRecoverableRecording: false),
+            [
+                .status,
+                .toggleRecorder, .transcribeFile, .recentTranscriptions, .copyLastTranscription,
+                .toggleDictationPause,
+                .openLeise, .settings,
+                .checkForUpdates, .about, .quit,
+            ]
         )
     }
 
-    func testMenuBarSectionsContainExpectedItems() {
-        XCTAssertEqual(
-            MenuBarMenuSection.general.items,
-            [.settings, .history]
-        )
-        XCTAssertEqual(
-            MenuBarMenuSection.recorder.items,
-            [.toggleRecorder]
-        )
-        XCTAssertEqual(
-            MenuBarMenuSection.transcription.items(hasRecoverableRecording: true),
-            [.toggleDictationHotkeysPause, .transcribeFile, .recoverLastRecording, .recentTranscriptions, .copyLastTranscription]
-        )
-        XCTAssertEqual(
-            MenuBarMenuSection.transcription.items(hasRecoverableRecording: false),
-            [.toggleDictationHotkeysPause, .transcribeFile, .recentTranscriptions, .copyLastTranscription]
-        )
-        XCTAssertEqual(
-            MenuBarMenuSection.updates.items,
-            [.checkForUpdates]
-        )
+    func testMenuBarOffersRecoveryRightUnderTheStatusOnlyWhenAvailable() {
+        let withRecovery = MenuBarMenuLayout.entries(hasRecoverableRecording: true)
+        XCTAssertEqual(Array(withRecovery.prefix(3)), [.item(.status), .item(.recoverLastRecording), .divider(1)])
+        XCTAssertFalse(MenuBarMenuLayout.items(hasRecoverableRecording: false).contains(.recoverLastRecording))
+    }
+
+    func testMenuBarGroupsAreSeparatedByDividersOnly() {
+        let entries = MenuBarMenuLayout.entries(hasRecoverableRecording: false)
+        XCTAssertEqual(entries, [
+            .item(.status),
+            .divider(1),
+            .item(.toggleRecorder), .item(.transcribeFile), .item(.recentTranscriptions), .item(.copyLastTranscription),
+            .divider(2),
+            .item(.toggleDictationPause),
+            .divider(3),
+            .item(.openLeise), .item(.settings),
+            .divider(4),
+            .item(.checkForUpdates), .item(.about), .item(.quit),
+        ])
+        XCTAssertEqual(Set(entries.map(\.id)).count, entries.count, "Every entry, dividers included, needs its own identity")
     }
 
     func testSettingsPreferencePagesUseExpectedOrder() {
@@ -908,45 +889,48 @@ final class MenuBarGroupingTests: XCTestCase {
 }
 
 final class MenuBarIconStateTests: XCTestCase {
-    func testIconShowsDictatingDuringDictationRecording() {
-        XCTAssertEqual(
-            MenuBarIconState.resolve(dictationState: .recording, recorderState: .idle),
-            .dictating
-        )
+    private func style(
+        _ dictationState: DictationViewModel.State,
+        _ recorderState: AudioRecorderViewModel.RecorderState,
+        reduceMotion: Bool = false
+    ) -> MenuBarGlyphStyle {
+        MenuBarGlyphStyle.resolve(dictationState: dictationState, recorderState: recorderState, reduceMotion: reduceMotion)
     }
 
-    func testIconShowsRecordingDuringRecorderRecording() {
-        XCTAssertEqual(
-            MenuBarIconState.resolve(dictationState: .idle, recorderState: .recording),
-            .recording
-        )
+    func testDictationMovesOrangeBarsWithTheVoice() {
+        XCTAssertEqual(style(.recording, .idle), MenuBarGlyphStyle(bars: .live, tint: .live, showsRecordingDot: false))
+        XCTAssertTrue(style(.recording, .idle).animates)
     }
 
-    func testRecorderWinsWhenDictationAndRecorderAreBothActive() {
-        XCTAssertEqual(
-            MenuBarIconState.resolve(dictationState: .recording, recorderState: .recording),
-            .recording
-        )
+    func testRecorderAddsARedDotSoTheStateIsNotColorAlone() {
+        XCTAssertEqual(style(.idle, .recording), MenuBarGlyphStyle(bars: .resting, tint: .record, showsRecordingDot: true))
+        XCTAssertFalse(style(.idle, .recording).animates, "A long recording must not keep the menu bar ticking")
     }
 
-    func testIconIsIdleWhileRecorderFinalizes() {
-        XCTAssertEqual(
-            MenuBarIconState.resolve(dictationState: .idle, recorderState: .finalizing),
-            .idle
-        )
+    func testDictationDuringARecordingKeepsBothCues() {
+        XCTAssertEqual(style(.recording, .recording), MenuBarGlyphStyle(bars: .live, tint: .live, showsRecordingDot: true))
     }
 
-    func testIconIsIdleWithoutActiveRecording() {
-        XCTAssertEqual(
-            MenuBarIconState.resolve(dictationState: .processing, recorderState: .idle),
-            .idle
-        )
+    func testWritingRunsTheWaveInTheMenuBarColor() {
+        XCTAssertEqual(style(.processing, .idle), MenuBarGlyphStyle(bars: .wave, tint: .template, showsRecordingDot: false))
     }
 
-    func testDictationIsOrangeAndRecordingIsRed() {
-        XCTAssertNil(MenuBarIconState.idle.tintColor)
-        XCTAssertEqual(MenuBarIconState.dictating.tintColor, .systemOrange)
-        XCTAssertEqual(MenuBarIconState.recording.tintColor, .systemRed)
+    func testIdleIsAStillTemplateWhileRecorderFinalizes() {
+        XCTAssertEqual(style(.idle, .finalizing), .idle)
+        XCTAssertEqual(style(.inserting, .idle), .idle)
+        XCTAssertTrue(MenuBarGlyphStyle.idle.isTemplate)
+        XCTAssertFalse(MenuBarGlyphStyle.idle.animates)
+    }
+
+    func testReduceMotionUsesDistinctStillShapes() {
+        let listening = style(.recording, .idle, reduceMotion: true)
+        let writing = style(.processing, .idle, reduceMotion: true)
+        XCTAssertEqual(listening.bars, .listeningStill)
+        XCTAssertEqual(writing.bars, .waveStill)
+        XCTAssertFalse(listening.animates)
+        XCTAssertFalse(writing.animates)
+        XCTAssertEqual(listening.stillHeights, LeiseMarkShape.listeningHeights)
+        XCTAssertNotEqual(writing.stillHeights, LeiseMarkShape.restingHeights)
     }
 }
 
@@ -1078,26 +1062,38 @@ final class NotchIndicatorPanelLifecycleTests: XCTestCase {
 
 final class MenuBarLogoMarkImageTests: XCTestCase {
     func testBarLayoutFitsWithinMenuBarSlotWithVisibleGaps() {
-        let rects = MenuBarLogoMarkImage.barRects(in: CGRect(x: 0, y: 0, width: 18, height: 18))
+        let slot = CGRect(origin: .zero, size: MenuBarLogoMarkImage.markSize)
+        let rects = MenuBarLogoMarkImage.barRects(in: slot)
 
         XCTAssertEqual(rects.count, 5)
         XCTAssertGreaterThanOrEqual(rects[0].minX, 0)
-        XCTAssertLessThanOrEqual(rects[4].maxX, 18)
-        XCTAssertGreaterThan(rects[2].height, rects[0].height)
+        XCTAssertLessThanOrEqual(rects[4].maxX, slot.width)
+        XCTAssertGreaterThan(rects[1].height, rects[0].height, "The second bar is the tallest, as in the mark")
+        XCTAssertGreaterThan(rects[0].height, rects[4].height, "The word fades out towards the right")
 
         for index in 1..<rects.count {
             XCTAssertGreaterThanOrEqual(rects[index].minX - rects[index - 1].maxX, 1)
         }
+        for rect in rects {
+            XCTAssertGreaterThanOrEqual(rect.minY, 0)
+            XCTAssertLessThanOrEqual(rect.maxY, slot.height)
+        }
     }
 
     func testIdleImageIsTemplateAndActiveImagesAreOriginalColoredArtwork() {
-        let idleImage = MenuBarLogoMarkImage.image(for: .idle)
-        let dictatingImage = MenuBarLogoMarkImage.image(for: .dictating)
-        let recordingImage = MenuBarLogoMarkImage.image(for: .recording)
+        let idleImage = MenuBarLogoMarkImage.image(style: .idle)
+        let dictatingImage = MenuBarLogoMarkImage.image(
+            style: MenuBarGlyphStyle(bars: .live, tint: .live, showsRecordingDot: false),
+            heights: LeiseMarkShape.liveHeights(level: 0.8, time: 1)
+        )
+        let recordingImage = MenuBarLogoMarkImage.image(
+            style: MenuBarGlyphStyle(bars: .resting, tint: .record, showsRecordingDot: true)
+        )
 
-        XCTAssertEqual(idleImage.size, MenuBarLogoMarkImage.size)
-        XCTAssertEqual(dictatingImage.size, MenuBarLogoMarkImage.size)
-        XCTAssertEqual(recordingImage.size, MenuBarLogoMarkImage.size)
+        XCTAssertEqual(idleImage.size, MenuBarLogoMarkImage.markSize)
+        XCTAssertEqual(dictatingImage.size, MenuBarLogoMarkImage.markSize)
+        XCTAssertEqual(recordingImage.size, MenuBarLogoMarkImage.size(showsRecordingDot: true))
+        XCTAssertGreaterThan(recordingImage.size.width, idleImage.size.width, "The recording dot adds a shape, not just a color")
         XCTAssertTrue(idleImage.isTemplate)
         XCTAssertFalse(dictatingImage.isTemplate)
         XCTAssertFalse(recordingImage.isTemplate)
