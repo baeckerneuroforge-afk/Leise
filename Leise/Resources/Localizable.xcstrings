@@ -1535,7 +1535,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Eigenen Sound hinzufuegen"
+            "value" : "Eigenen Sound hinzufügen"
           }
         },
         "ja" : {
@@ -3363,7 +3363,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Sounddatei auswaehlen"
+            "value" : "Sounddatei auswählen"
           }
         },
         "ja" : {
@@ -3399,7 +3399,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Waehle eine Transkriptions-Engine. Jede Engine muss ein Modell herunterladen. Oeffne die Einstellungen zum Konfigurieren."
+            "value" : "Wähle eine Transkriptions-Engine. Jede Engine muss ein Modell herunterladen. Öffne die Einstellungen zum Konfigurieren."
           }
         },
         "ja" : {
@@ -11111,7 +11111,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Noch keine Community-Pakete verfuegbar."
+            "value" : "Noch keine Community-Pakete verfügbar."
           }
         },
         "ja" : {
@@ -11623,7 +11623,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Keine Transkriptions-Engines verfuegbar."
+            "value" : "Keine Transkriptions-Engines verfügbar."
           }
         },
         "ja" : {
@@ -11642,7 +11642,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Keine Transkriptions-Engines installiert. Engines ueber Integrationen installieren."
+            "value" : "Keine Transkriptions-Engines installiert. Engines über Integrationen installieren."
           }
         },
         "ja" : {
@@ -12108,7 +12108,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Integrationen oeffnen"
+            "value" : "Integrationen öffnen"
           }
         },
         "ja" : {
@@ -12171,7 +12171,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Oeffne die Einstellungen einer Engine, um ein Modell herunterzuladen."
+            "value" : "Öffne die Einstellungen einer Engine, um ein Modell herunterzuladen."
           }
         },
         "ja" : {
@@ -17237,7 +17237,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Text eingefuegt"
+            "value" : "Text eingefügt"
           }
         },
         "ja" : {
@@ -18091,7 +18091,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Zu kurz, halte den Hotkey etwas laenger"
+            "value" : "Zu kurz – halte die Taste etwas länger"
           }
         },
         "ja" : {
@@ -18747,7 +18747,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Update verfuegbar"
+            "value" : "Update verfügbar"
           }
         },
         "ja" : {
@@ -20918,7 +20918,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Speichert ein Transkript fuer Recorder-Aufnahmen. Die Auswahl unten gilt nur fuer den System Audio Recorder, nicht fuer normale Dictation."
+            "value" : "Speichert ein Transkript für Recorder-Aufnahmen. Die Auswahl unten gilt nur für den System Audio Recorder, nicht für normale Dictation."
           }
         },
         "en" : {
@@ -21029,7 +21029,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Die finale Transkription hat keinen Text zurueckgegeben."
+            "value" : "Die finale Transkription hat keinen Text zurückgegeben."
           }
         },
         "en" : {
@@ -21387,7 +21387,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Keine Engine ausgewaehlt"
+            "value" : "Keine Engine ausgewählt"
           }
         },
         "en" : {
@@ -21585,7 +21585,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Live-Transkript waehrend der Aufnahme anzeigen"
+            "value" : "Live-Transkript während der Aufnahme anzeigen"
           }
         },
         "en" : {
@@ -21849,7 +21849,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Transkription fehlgeschlagen waehrend %@: %@"
+            "value" : "Transkription fehlgeschlagen während %@: %@"
           }
         },
         "en" : {
@@ -21871,7 +21871,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Transkription fehlgeschlagen fuer %@, %@ waehrend %@: %@"
+            "value" : "Transkription fehlgeschlagen für %@, %@ während %@: %@"
           }
         },
         "en" : {
@@ -21893,7 +21893,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Aktiviere das Transkript, um Engine, Modell, Sprache und Aufgabe fuer Recorder-Aufnahmen zu aendern."
+            "value" : "Aktiviere das Transkript, um Engine, Modell, Sprache und Aufgabe für Recorder-Aufnahmen zu ändern."
           }
         },
         "en" : {
@@ -22044,7 +22044,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Haeufige Begriffe aus Datenanalyse und KI fuer bessere Spracherkennung."
+            "value" : "Häufige Begriffe aus Datenanalyse und KI für bessere Spracherkennung."
           }
         },
         "en" : {
@@ -22067,7 +22067,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Haeufige Design-Begriffe fuer bessere Spracherkennung."
+            "value" : "Häufige Design-Begriffe für bessere Spracherkennung."
           }
         },
         "en" : {
@@ -22090,7 +22090,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Haeufige DevOps- und Cloud-Begriffe fuer bessere Spracherkennung."
+            "value" : "Häufige DevOps- und Cloud-Begriffe für bessere Spracherkennung."
           }
         },
         "en" : {
@@ -22113,7 +22113,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Haeufige iOS- und macOS-Begriffe fuer bessere Spracherkennung."
+            "value" : "Häufige iOS- und macOS-Begriffe für bessere Spracherkennung."
           }
         },
         "en" : {
@@ -22136,7 +22136,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Haeufige Begriffe aus der Webentwicklung fuer bessere Spracherkennung."
+            "value" : "Häufige Begriffe aus der Webentwicklung für bessere Spracherkennung."
           }
         },
         "en" : {
