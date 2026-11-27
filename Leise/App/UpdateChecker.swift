@@ -1,13 +1,15 @@
 @preconcurrency import Sparkle
 
+/// Sparkle behind closures, so views can check for updates without importing
+/// Sparkle. Sparkle's updater is main-actor bound, and so are the closures.
 struct UpdateChecker: Sendable {
-    let canCheckForUpdates: @Sendable () -> Bool
-    let checkForUpdates: @Sendable () -> Void
-    let resetUpdateCycleAfterSettingsChange: @Sendable () -> Void
+    let canCheckForUpdates: @MainActor @Sendable () -> Bool
+    let checkForUpdates: @MainActor @Sendable () -> Void
+    let resetUpdateCycleAfterSettingsChange: @MainActor @Sendable () -> Void
 
+    @MainActor
     static func sparkle(_ updater: SPUUpdater) -> UpdateChecker {
-        nonisolated(unsafe) let updater = updater
-        return UpdateChecker(
+        UpdateChecker(
             canCheckForUpdates: { updater.canCheckForUpdates },
             checkForUpdates: { updater.checkForUpdates() },
             resetUpdateCycleAfterSettingsChange: { updater.resetUpdateCycleAfterShortDelay() }

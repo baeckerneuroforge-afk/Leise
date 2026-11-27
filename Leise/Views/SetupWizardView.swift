@@ -1,1392 +1,855 @@
-import SwiftUI
+import AppKit
+import Combine
 import LeiseCore
+import ParakeetEngine
+import SwiftUI
 
-private struct SetupModelActivity {
-    let message: String
-    let progress: Double?
-    let isError: Bool
-}
+// The setup window: four steps (Willkommen, Zugriff, Tastenkürzel,
+// Ausprobieren) in a native window that follows the system appearance. The
+// language model downloads in the background from the first step on; the
+// footer chip reports it. Step views live in SetupSteps.swift.
 
-struct SetupWizardView: View {
-    @Environment(\.dismiss) private var dismiss
+// MARK: - Steps
 
-    @ObservedObject private var dictation = ServiceContainer.shared.dictationViewModel
-    @ObservedObject private var modelManager = ServiceContainer.shared.modelManagerService
-
-    @State private var currentStep: Int
-    @State private var selectedHotkeyMode: HotkeySlotType
-    @State private var trialSuccess = false
-    @State private var trialText = ""
-    @State private var didAnnounceInitialStep = false
-    @State private var isActivatingParakeet = false
-    @State private var selectedParakeetModelId: String?
-    @State private var parakeetSetupActivity: SetupModelActivity?
-    @State private var manuallySelectedSetupProviderId: String?
-    @FocusState private var isTrialFieldFocused: Bool
-
-    private let accessibilityAnnouncementService = ServiceContainer.shared.accessibilityAnnouncementService
-
-    init() {
-        let saved = UserDefaults.standard.integer(forKey: UserDefaultsKeys.setupWizardCurrentStep)
-        let maxStep = SetupWizardStep.allCases.count - 1
-        _currentStep = State(initialValue: min(max(saved, 0), maxStep))
-
-        if !DictationSettingsHandler.loadHotkeys(for: .hybrid).isEmpty {
-            _selectedHotkeyMode = State(initialValue: .hybrid)
-        } else if !DictationSettingsHandler.loadHotkeys(for: .pushToTalk).isEmpty {
-            _selectedHotkeyMode = State(initialValue: .pushToTalk)
-        } else if !DictationSettingsHandler.loadHotkeys(for: .toggle).isEmpty {
-            _selectedHotkeyMode = State(initialValue: .toggle)
-        } else {
-            _selectedHotkeyMode = State(initialValue: .hybrid)
-        }
-    }
-
-    var body: some View {
-        ZStack {
-            LinearGradient(
-                colors: [
-                    Color(red: 0.02, green: 0.05, blue: 0.07),
-                    Color(red: 0.04, green: 0.09, blue: 0.12),
-                    Color.black
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            .ignoresSafeArea()
-
-            VStack(spacing: 0) {
-                header
-
-                stepContent
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-
-                footer
-            }
-        }
-        .frame(minWidth: 760, idealWidth: 820, maxWidth: 860, minHeight: 520, idealHeight: 560)
-        .preferredColorScheme(.dark)
-        .onChange(of: currentStep) { _, newValue in
-            UserDefaults.standard.set(newValue, forKey: UserDefaultsKeys.setupWizardCurrentStep)
-            announceCurrentStep()
-        }
-        .task {
-            if !didAnnounceInitialStep {
-                didAnnounceInitialStep = true
-                announceCurrentStep()
-            }
-
-        }
-        .task(id: currentStep) {
-            guard currentWizardStep == .engineAI || currentWizardStep == .finish else { return }
-            await preparePreferredSetupEngineIfNeeded()
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .resetSetupWizardWindow)) { _ in
-            restartWizardFromBeginning()
-        }
-    }
-
-    // MARK: - Shell
-
-    private var currentWizardStep: SetupWizardStep {
-        SetupWizardStep(rawValue: currentStep) ?? .welcome
-    }
-
-    private func announceCurrentStep() {
-        accessibilityAnnouncementService.announce(String(localized: "\(currentWizardStep.title). Step \(currentStep + 1) of \(SetupWizardStep.allCases.count). \(currentWizardStep.subtitle)"))
-    }
-
-    private func restartWizardFromBeginning() {
-        trialSuccess = false
-        trialText = ""
-        manuallySelectedSetupProviderId = nil
-        UserDefaults.standard.set(0, forKey: UserDefaultsKeys.setupWizardCurrentStep)
-        withAnimation(.easeInOut(duration: 0.18)) {
-            currentStep = 0
-        }
-    }
-
-    private var header: some View {
-        VStack(spacing: 16) {
-            Text(String(localized: "Leise Setup"))
-                .font(.headline.weight(.semibold))
-                .foregroundStyle(.primary)
-
-            HStack(spacing: 10) {
-                ForEach(SetupWizardStep.allCases) { step in
-                    progressItem(for: step)
-
-                    if step.rawValue < SetupWizardStep.allCases.count - 1 {
-                        Rectangle()
-                            .fill(step.rawValue < currentStep ? Color.blue : Color.white.opacity(0.14))
-                            .frame(width: 46, height: 1)
-                            .accessibilityHidden(true)
-                    }
-                }
-            }
-            .frame(maxWidth: .infinity)
-        }
-        .padding(.top, 18)
-        .padding(.horizontal, 34)
-        .padding(.bottom, 10)
-    }
-
-    private func progressItem(for step: SetupWizardStep) -> some View {
-        VStack(spacing: 7) {
-            ZStack {
-                Circle()
-                    .fill(progressFill(for: step))
-                    .frame(width: 26, height: 26)
-
-                if step.rawValue < currentStep {
-                    Image(systemName: "checkmark")
-                        .font(.caption.weight(.bold))
-                        .foregroundStyle(.white)
-                } else {
-                    Text("\(step.rawValue + 1)")
-                        .font(.caption.weight(.bold))
-                        .foregroundStyle(step.rawValue <= currentStep ? .white : .secondary)
-                }
-            }
-
-            Text(step.progressTitle)
-                .font(.caption2.weight(step == currentWizardStep ? .semibold : .regular))
-                .foregroundStyle(step == currentWizardStep ? .primary : .secondary)
-                .lineLimit(1)
-        }
-        .frame(width: 82)
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel(String(localized: "Step \(step.rawValue + 1) of \(SetupWizardStep.allCases.count), \(step.progressTitle)"))
-        .accessibilityValue(progressAccessibilityStatus(for: step))
-    }
-
-    private func progressFill(for step: SetupWizardStep) -> Color {
-        if step.rawValue <= currentStep {
-            return .blue
-        }
-        return Color.white.opacity(0.16)
-    }
-
-    private func progressAccessibilityStatus(for step: SetupWizardStep) -> String {
-        if step.rawValue < currentStep {
-            return String(localized: "Completed")
-        }
-        if step == currentWizardStep {
-            return String(localized: "Current")
-        }
-        return String(localized: "Upcoming")
-    }
-
-    private var stepContent: some View {
-        ScrollView {
-            VStack(spacing: 18) {
-                VStack(spacing: 5) {
-                    Text(currentWizardStep.title)
-                        .font(.title2.weight(.bold))
-                        .multilineTextAlignment(.center)
-                        .accessibilityAddTraits(.isHeader)
-
-                    Text(currentWizardStep.subtitle)
-                        .font(.callout)
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
-                }
-                .padding(.top, 12)
-
-                switch currentWizardStep {
-                case .welcome:
-                    welcomeStep
-                case .permissions:
-                    permissionsStep
-                case .hotkey:
-                    hotkeyStep
-                case .engineAI:
-                    engineAIStep
-                case .finish:
-                    finishStep
-                }
-            }
-            .frame(maxWidth: 620)
-            .frame(maxWidth: .infinity)
-            .padding(.horizontal, 34)
-            .padding(.bottom, 18)
-        }
-        .scrollIndicators(.never)
-    }
-
-    private var footer: some View {
-        HStack(spacing: 12) {
-            if currentStep > 0 {
-                Button(String(localized: "Back")) {
-                    withAnimation(.easeInOut(duration: 0.18)) {
-                        currentStep -= 1
-                    }
-                }
-                .buttonStyle(.bordered)
-                .keyboardShortcut(.leftArrow, modifiers: [.command])
-            }
-
-            Spacer()
-
-            Button(String(localized: "Skip Setup")) {
-                completeSetupAndOpenHome()
-            }
-            .buttonStyle(.bordered)
-            .keyboardShortcut(.cancelAction)
-
-            Button(primaryActionTitle) {
-                handlePrimaryAction()
-            }
-            .buttonStyle(.borderedProminent)
-            .keyboardShortcut(primaryKeyboardShortcut)
-            .accessibilityHint(primaryActionAccessibilityHint)
-            .disabled(!canProceed)
-        }
-        .padding(.horizontal, 34)
-        .padding(.vertical, 18)
-        .background(Color.black.opacity(0.18))
-    }
-
-    private var primaryActionTitle: String {
-        if currentWizardStep == .permissions, dictation.needsMicPermission {
-            return String(localized: "Grant Microphone Access")
-        }
-
-        return currentWizardStep == .finish
-            ? String(localized: "Complete Setup")
-            : String(localized: "Continue")
-    }
-
-    private var primaryKeyboardShortcut: KeyboardShortcut {
-        currentWizardStep == .finish
-            ? KeyboardShortcut(.return, modifiers: [.command])
-            : .defaultAction
-    }
-
-    private var primaryActionAccessibilityHint: String {
-        if currentWizardStep == .finish {
-            return String(localized: "Press Command Return to complete setup.")
-        }
-
-        return String(localized: "Press Return to continue.")
-    }
-
-    private func handlePrimaryAction() {
-        if currentWizardStep == .permissions, dictation.needsMicPermission {
-            dictation.requestMicPermission()
-            return
-        }
-
-        if currentWizardStep == .hotkey {
-            applyRecommendedHotkeyIfNeeded()
-        }
-
-        if currentWizardStep == .finish {
-            completeSetupAndOpenHome()
-            return
-        }
-
-        withAnimation(.easeInOut(duration: 0.18)) {
-            currentStep = min(currentStep + 1, SetupWizardStep.allCases.count - 1)
-        }
-    }
-
-    private func completeSetupAndOpenHome() {
-        ServiceContainer.shared.homeViewModel.completeSetupWizard()
-        SettingsNavigationCoordinator.shared.navigate(to: .home)
-        dismiss()
-
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
-            ManagedAppWindowOpener.shared.open(id: "settings")
-        }
-    }
-
-    // MARK: - Welcome
-
-    private var welcomeStep: some View {
-        VStack(spacing: 22) {
-            Image(nsImage: NSApplication.shared.applicationIconImage)
-                .resizable()
-                .frame(width: 74, height: 74)
-                .shadow(color: .blue.opacity(0.35), radius: 16)
-
-            VStack(alignment: .leading, spacing: 14) {
-                setupFeatureRow(
-                    icon: "mic.fill",
-                    title: String(localized: "Speak naturally"),
-                    description: String(localized: "Press a hotkey and talk in any app.")
-                )
-                setupFeatureRow(
-                    icon: "text.cursor",
-                    title: String(localized: "Type instantly"),
-                    description: String(localized: "Your words appear as text right away.")
-                )
-                setupFeatureRow(
-                    icon: "wand.and.stars",
-                    title: String(localized: "Enhance with AI"),
-                    description: String(localized: "Transcribe locally with the selected Parakeet model.")
-                )
-            }
-            .frame(maxWidth: 390, alignment: .leading)
-        }
-        .padding(.top, 4)
-    }
-
-    private func setupFeatureRow(icon: String, title: String, description: String) -> some View {
-        HStack(alignment: .top, spacing: 14) {
-            Image(systemName: icon)
-                .font(.title3)
-                .foregroundStyle(.blue)
-                .frame(width: 30, height: 28)
-                .accessibilityHidden(true)
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title)
-                    .font(.headline)
-                Text(description)
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-        }
-    }
-
-    // MARK: - Permissions
-
-    private var permissionsStep: some View {
-        VStack(spacing: 12) {
-            permissionCard(
-                title: String(localized: "Microphone Access"),
-                description: String(localized: "Required to capture your voice."),
-                systemImage: "mic.fill",
-                isGranted: !dictation.needsMicPermission,
-                isRequired: true,
-                action: { dictation.requestMicPermission() }
-            )
-
-            permissionCard(
-                title: String(localized: "Accessibility Access"),
-                description: String(localized: "Required to type into other apps."),
-                systemImage: "figure.stand",
-                isGranted: !dictation.needsAccessibilityPermission,
-                isRequired: false,
-                action: { dictation.requestAccessibilityPermission() }
-            )
-
-            Label(
-                String(localized: "You can change permissions anytime in System Settings."),
-                systemImage: "lock"
-            )
-            .font(.caption)
-            .foregroundStyle(.secondary)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.top, 6)
-        }
-    }
-
-    private func permissionCard(
-        title: String,
-        description: String,
-        systemImage: String,
-        isGranted: Bool,
-        isRequired: Bool,
-        action: @escaping () -> Void
-    ) -> some View {
-        setupCard(isSelected: false) {
-            HStack(spacing: 16) {
-                Image(systemName: systemImage)
-                    .font(.title)
-                    .foregroundStyle(isGranted ? .green : .blue)
-                    .frame(width: 38)
-                    .accessibilityHidden(true)
-
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(title)
-                        .font(.headline)
-                    Text(description)
-                        .font(.callout)
-                        .foregroundStyle(.secondary)
-                }
-
-                Spacer()
-
-                if isGranted {
-                    statusPill(
-                        String(localized: "Granted"),
-                        systemImage: "checkmark.circle.fill",
-                        color: .green
-                    )
-                } else {
-                    VStack(alignment: .trailing, spacing: 8) {
-                        statusPill(
-                            String(localized: "Needs Access"),
-                            systemImage: isRequired ? "exclamationmark.circle.fill" : "circle",
-                            color: isRequired ? .orange : .secondary
-                        )
-
-                        Button(String(localized: "Grant Access")) {
-                            action()
-                        }
-                        .buttonStyle(.bordered)
-                        .controlSize(.small)
-                    }
-                }
-            }
-        }
-        .accessibilityElement(children: .combine)
-        .accessibilityAddTraits(isGranted ? [] : .isButton)
-        .accessibilityLabel(permissionAccessibilityLabel(title: title, description: description, isGranted: isGranted))
-        .accessibilityHint(isGranted ? "" : String(localized: "Use the grant access button to continue setup."))
-        .accessibilityAction(named: Text(String(localized: "Grant Access"))) {
-            guard !isGranted else { return }
-            action()
-        }
-    }
-
-    private func permissionAccessibilityLabel(title: String, description: String, isGranted: Bool) -> String {
-        let status = isGranted
-            ? String(localized: "Granted")
-            : String(localized: "Needs access")
-        return "\(title). \(description) \(status)."
-    }
-
-    // MARK: - Hotkey
-
-    private var hotkeyStep: some View {
-        VStack(spacing: 12) {
-            recommendedHotkeyCard
-
-            VStack(spacing: 8) {
-                compactHotkeyModeCard(
-                    mode: .pushToTalk,
-                    title: String(localized: "Push-to-Talk"),
-                    description: String(localized: "Hold to record, release to stop.")
-                )
-
-                compactHotkeyModeCard(
-                    mode: .toggle,
-                    title: String(localized: "Toggle"),
-                    description: String(localized: "Press to start, press again to stop.")
-                )
-            }
-
-            if let hotkeyMessage {
-                Label(hotkeyMessage.text, systemImage: hotkeyMessage.systemImage)
-                    .font(.caption)
-                    .foregroundStyle(hotkeyMessage.color)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.top, 4)
-            }
-        }
-    }
-
-    private var recommendedHotkeyCard: some View {
-        setupCard(isSelected: selectedHotkeyMode == .hybrid) {
-            VStack(spacing: 12) {
-                HStack(spacing: 14) {
-                    Image(systemName: selectedHotkeyMode == .hybrid ? "largecircle.fill.circle" : "circle")
-                        .foregroundStyle(selectedHotkeyMode == .hybrid ? .blue : .secondary)
-
-                    VStack(alignment: .leading, spacing: 4) {
-                        HStack(spacing: 8) {
-                            Text(String(localized: "Hybrid"))
-                                .font(.headline)
-
-                            Text(String(localized: "Recommended"))
-                                .font(.caption2.weight(.semibold))
-                                .padding(.horizontal, 7)
-                                .padding(.vertical, 3)
-                                .background(Color.blue.opacity(0.18))
-                                .foregroundStyle(.blue)
-                                .clipShape(Capsule())
-                        }
-
-                        Text(String(localized: "Short press to toggle, hold to push-to-talk."))
-                            .font(.callout)
-                            .foregroundStyle(.secondary)
-                    }
-
-                    Spacer()
-
-                    hotkeyChip(label: displayedHotkeyLabel(for: .hybrid))
-                }
-                .contentShape(Rectangle())
-                .onTapGesture { selectedHotkeyMode = .hybrid }
-
-                if selectedHotkeyMode == .hybrid, shouldShowRecorder(for: .hybrid) {
-                    hotkeyRecorder(for: .hybrid)
-                }
-            }
-        }
-        .accessibilityElement(children: .combine)
-        .accessibilityAddTraits(.isButton)
-        .accessibilityLabel(hotkeyModeAccessibilityLabel(
-            title: String(localized: "Hybrid"),
-            description: String(localized: "Short press to toggle, hold to push-to-talk."),
-            label: displayedHotkeyLabel(for: .hybrid)
-        ))
-        .accessibilityValue(selectedHotkeyMode == .hybrid ? String(localized: "Selected") : "")
-        .accessibilityHint(String(localized: "Recommended. Press Return to continue with this shortcut."))
-        .accessibilityAction(named: Text(String(localized: "Select"))) {
-            selectedHotkeyMode = .hybrid
-        }
-    }
-
-    private func compactHotkeyModeCard(mode: HotkeySlotType, title: String, description: String) -> some View {
-        setupCard(isSelected: selectedHotkeyMode == mode) {
-            VStack(spacing: 10) {
-                HStack(spacing: 14) {
-                    Image(systemName: selectedHotkeyMode == mode ? "largecircle.fill.circle" : "circle")
-                        .foregroundStyle(selectedHotkeyMode == mode ? .blue : .secondary)
-
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(title)
-                            .font(.headline)
-                        Text(description)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-
-                    Spacer()
-
-                    if !dictation.hotkeys(for: mode).isEmpty {
-                        hotkeyChip(label: displayedHotkeyLabel(for: mode))
-                    }
-                }
-                .contentShape(Rectangle())
-                .onTapGesture { selectedHotkeyMode = mode }
-
-                if selectedHotkeyMode == mode, shouldShowRecorder(for: mode) {
-                    hotkeyRecorder(for: mode)
-                }
-            }
-        }
-        .accessibilityElement(children: .combine)
-        .accessibilityAddTraits(.isButton)
-        .accessibilityLabel(hotkeyModeAccessibilityLabel(
-            title: title,
-            description: description,
-            label: displayedHotkeyLabel(for: mode)
-        ))
-        .accessibilityValue(selectedHotkeyMode == mode ? String(localized: "Selected") : "")
-        .accessibilityHint(String(localized: "Selects this hotkey mode."))
-        .accessibilityAction(named: Text(String(localized: "Select"))) {
-            selectedHotkeyMode = mode
-        }
-    }
-
-    private func hotkeyModeAccessibilityLabel(title: String, description: String, label: String) -> String {
-        "\(title). \(description) \(String(localized: "Shortcut")): \(label)."
-    }
-
-    private func shouldShowRecorder(for mode: HotkeySlotType) -> Bool {
-        SetupWizardHotkeyRecorderVisibility.shouldShow(
-            mode: mode,
-            selectedMode: selectedHotkeyMode,
-            hasRecordedHotkey: !dictation.hotkeys(for: mode).isEmpty
-        )
-    }
-
-    private func hotkeyRecorder(for mode: HotkeySlotType) -> some View {
-        HStack(spacing: 10) {
-            Image(systemName: "keyboard")
-                .foregroundStyle(.blue)
-
-            HotkeyRecorderView(
-                label: hotkeyLabel(for: mode),
-                title: String(localized: "Shortcut"),
-                onRecord: { hotkey in
-                    if let conflict = dictation.isHotkeyAssigned(hotkey, excluding: mode) {
-                        dictation.clearHotkey(for: conflict)
-                    }
-                    dictation.setHotkey(hotkey, for: mode)
-                },
-                onClear: { dictation.clearHotkey(for: mode) }
-            )
-            .fixedSize()
-
-            Spacer()
-        }
-        .padding(10)
-        .background(RoundedRectangle(cornerRadius: 8).fill(Color.blue.opacity(0.08)))
-    }
-
-    private var hotkeyMessage: (text: String, systemImage: String, color: Color)? {
-        if hasAnyTriggerHotkey {
-            return (
-                String(localized: "Your existing shortcut will stay unchanged."),
-                "checkmark.circle.fill",
-                .green
-            )
-        }
-
-        if selectedHotkeyMode == .hybrid, recommendedHotkeyResolution.shouldApply {
-            return (
-                String(localized: "Fn will be set automatically when you continue."),
-                "keyboard",
-                .secondary
-            )
-        }
-
-        if selectedHotkeyMode == .hybrid,
-           case .conflictingSlot(let slot) = recommendedHotkeyResolution.blockedReason {
-            return (
-                String(localized: "Fn is already used by \(hotkeyModeTitle(for: slot)). Record another shortcut to continue."),
-                "exclamationmark.triangle.fill",
-                .orange
-            )
-        }
-
-        return (
-            String(localized: "Record a shortcut to use this mode."),
-            "keyboard",
-            .secondary
-        )
-    }
-
-    // MARK: - Engine & AI
-
-    private var engineAIStep: some View {
-        VStack(spacing: 10) {
-            localReadinessCard
-
-            recommendationCard(
-                manifestId: SetupWizardParakeetRecommendation.manifestId,
-                title: "Parakeet",
-                badge: String(localized: "Recommended"),
-                description: SetupWizardParakeetRecommendation.description,
-                systemImage: "desktopcomputer",
-                isProminent: true
-            )
-        }
-    }
-
-    private var localReadinessCard: some View {
-        let isReady = hasEngineReadyForSetupTest
-
-        return HStack(spacing: 10) {
-            Image(systemName: isReady ? "checkmark.circle.fill" : "circle.dashed")
-                .foregroundStyle(isReady ? .green : .secondary)
-            Text(localReadinessText)
-            .font(.callout.weight(.medium))
-            .foregroundStyle(isReady ? .green : .secondary)
-            Spacer()
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 10)
-        .background(RoundedRectangle(cornerRadius: 8).fill(Color.white.opacity(0.06)))
-    }
-
-    private var localReadinessText: String {
-        if isActivatingParakeet {
-            if let progress = parakeetSetupActivity?.progress {
-                let percent = Int(progress * 100)
-                return parakeetEngine?.usesBundledModels == true
-                    ? String(localized: "Loading included Parakeet model (\(percent)%)")
-                    : String(localized: "Downloading Parakeet model (\(percent)%)")
-            }
-            return parakeetEngine?.usesBundledModels == true
-                ? String(localized: "Loading the included Parakeet model")
-                : String(localized: "Downloading and loading the Parakeet model")
-        }
-        if hasEngineReadyForSetupTest {
-            if selectedTranscriptionEngineForSetup?.id == SetupWizardParakeetRecommendation.providerId {
-                return String(localized: "Parakeet is ready for local dictation")
-            }
-            return String(localized: "Ready to use locally")
-        }
-        return String(localized: "Set up Parakeet now or continue and finish later")
-    }
-
-    @ViewBuilder
-    private func recommendationCard(
-        manifestId: String,
-        title: String,
-        badge: String,
-        description: String,
-        systemImage: String,
-        isProminent: Bool = false
-    ) -> some View {
-        let engine = manifestId == SetupWizardParakeetRecommendation.manifestId
-            ? parakeetEngine
-            : nil
-        let isInstalled = engine != nil
-        let isReady = engine?.isReady ?? false
-        let isSelected = engine?.id == modelManager.selectedProviderId
-        let availability = SetupWizardRecommendationAvailability.resolve(
-            manifestId: manifestId,
-            isInstalled: isInstalled,
-            isReady: isReady,
-            hasBundledModels: engine?.usesBundledModels ?? false
-        )
-        let isInteractive = recommendationCardIsInteractive(
-            manifestId: manifestId,
-            availability: availability,
-            isSelected: isSelected
-        )
-        let card = setupCard(isSelected: isSelected) {
-            VStack(spacing: 10) {
-                HStack(spacing: 14) {
-                    Image(systemName: systemImage)
-                        .font(.title2)
-                        .foregroundStyle(.blue)
-                        .frame(width: 36)
-
-                    VStack(alignment: .leading, spacing: 4) {
-                        HStack(spacing: 7) {
-                            Text(title)
-                                .font(.headline)
-                            Text(badge)
-                                .font(.caption2.weight(.semibold))
-                                .padding(.horizontal, 7)
-                                .padding(.vertical, 3)
-                                .background(Color.blue.opacity(isProminent ? 0.22 : 0.18))
-                                .foregroundStyle(.blue)
-                                .clipShape(Capsule())
-                        }
-
-                        Text(recommendationDescription(fallback: description, availability: availability))
-                            .font(.callout)
-                            .foregroundStyle(.secondary)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-
-                    Spacer()
-
-                    recommendationStatus(
-                        manifestId: manifestId,
-                        availability: availability,
-                        isSelected: isSelected
-                    )
-                }
-
-                if manifestId == SetupWizardParakeetRecommendation.manifestId,
-                   let engine {
-                    Divider()
-                    parakeetModelSetupControls(engine: engine)
-                }
-            }
-        }
-
-        if isInteractive {
-            card
-                .contentShape(Rectangle())
-                .onTapGesture {
-                    Task { await handleRecommendationCardAction(manifestId: manifestId) }
-                }
-                .accessibilityAddTraits(.isButton)
-                .accessibilityHint(recommendationCardAccessibilityHint(manifestId: manifestId, availability: availability))
-        } else {
-            card
-        }
-    }
-
-    @ViewBuilder
-    private func recommendationStatus(
-        manifestId: String,
-        availability: SetupWizardRecommendationAvailability,
-        isSelected: Bool
-    ) -> some View {
-        if manifestId == SetupWizardParakeetRecommendation.manifestId, isActivatingParakeet {
-            if let progress = parakeetSetupActivity?.progress {
-                ProgressView(value: progress)
-                    .frame(width: 72)
-            } else {
-                ProgressView()
-                    .controlSize(.small)
-            }
-        } else {
-            switch availability {
-            case .ready:
-                if manifestId == SetupWizardParakeetRecommendation.manifestId,
-                   parakeetEngine?.usesBundledModels == true,
-                   !(parakeetEngine?.isReady ?? false) {
-                    statusPill(String(localized: "Included"), systemImage: "shippingbox.fill", color: .green)
-                } else if manifestId == SetupWizardParakeetRecommendation.manifestId, isSelected {
-                    statusPill(String(localized: "Selected"), systemImage: "checkmark.circle.fill", color: .blue)
-                } else if manifestId == SetupWizardParakeetRecommendation.manifestId {
-                    statusPill(String(localized: "Select"), systemImage: "circle", color: .blue)
-                } else {
-                    statusPill(String(localized: "Ready"), systemImage: "checkmark.circle.fill", color: .green)
-                }
-            case .setupRequired:
-                if manifestId == SetupWizardParakeetRecommendation.manifestId {
-                    statusPill(
-                        parakeetSetupActivity?.isError == true
-                            ? String(localized: "Retry download")
-                            : String(localized: "Download required"),
-                        systemImage: parakeetSetupActivity?.isError == true ? "exclamationmark.triangle.fill" : "arrow.down.circle.fill",
-                        color: parakeetSetupActivity?.isError == true ? .orange : .blue
-                    )
-                    .help(parakeetSetupActivity?.isError == true ? parakeetSetupActivity?.message ?? "" : "")
-                } else {
-                    RecommendationSettingsButton(manifestId: manifestId)
-                }
-            case .unavailable(let reason):
-                statusPill(reason.title, systemImage: "exclamationmark.triangle.fill", color: .orange)
-                    .help(reason.message)
-            }
-        }
-    }
-
-    private func recommendationCardIsInteractive(
-        manifestId: String,
-        availability: SetupWizardRecommendationAvailability,
-        isSelected: Bool
-    ) -> Bool {
-        guard manifestId == SetupWizardParakeetRecommendation.manifestId, !isSelected else {
-            return false
-        }
-
-        switch availability {
-        case .ready:
-            return true
-        default:
-            return false
-        }
-    }
-
-    private func recommendationCardAccessibilityHint(
-        manifestId: String,
-        availability: SetupWizardRecommendationAvailability
-    ) -> String {
-        guard manifestId == SetupWizardParakeetRecommendation.manifestId else {
-            return ""
-        }
-
-        switch availability {
-        case .setupRequired:
-            return String(localized: "Downloads and loads the selected Parakeet model.")
-        default:
-            return String(localized: "Selects Parakeet.")
-        }
-    }
-
-    @MainActor
-    private func handleRecommendationCardAction(manifestId: String) async {
-        guard manifestId == SetupWizardParakeetRecommendation.manifestId else { return }
-        await activateParakeetForSetup()
-    }
-
-    @ViewBuilder
-    private func parakeetModelSetupControls(engine: any TranscriptionEngine) -> some View {
-        if engine.usesBundledModels {
-            bundledParakeetModelSetupControls(engine: engine)
-        } else {
-            downloadableParakeetModelSetupControls(engine: engine)
-        }
-    }
-
-    @ViewBuilder
-    private func bundledParakeetModelSetupControls(engine: any TranscriptionEngine) -> some View {
-        let requestedModelId = selectedParakeetModelId
-            ?? engine.selectedModelID
-            ?? SetupWizardParakeetRecommendation.preferredModelId(from: engine.models)
-            ?? ""
-
-        VStack(alignment: .leading, spacing: 9) {
-            Text(String(localized: "Choose your language coverage"))
-                .font(.subheadline.weight(.semibold))
-            Text(String(localized: "The models are already included. You can change this later in Processing settings."))
-            .font(.caption)
-            .foregroundStyle(.secondary)
-
-            HStack(spacing: 10) {
-                ForEach(engine.models) { model in
-                    let copy = SetupWizardParakeetRecommendation.bundledModelCopy(for: model)
-                    bundledModelChoice(
-                        engine: engine,
-                        modelId: model.id,
-                        title: copy.title,
-                        subtitle: copy.subtitle,
-                        isSelected: requestedModelId == model.id
-                    )
-                }
-            }
-        }
-    }
-
-    private func bundledModelChoice(
-        engine: any TranscriptionEngine,
-        modelId: String,
-        title: String,
-        subtitle: String,
-        isSelected: Bool
-    ) -> some View {
-        let isLoaded = SetupWizardParakeetModelSelection.isLoaded(
-            requestedModelId: modelId,
-            loadedModelId: engine.selectedModelID,
-            isConfigured: engine.isReady
-        )
-
-        return Button {
-            selectedParakeetModelId = modelId
-            Task { await activateParakeetForSetup(modelId: modelId) }
-        } label: {
-            VStack(alignment: .leading, spacing: 5) {
-                HStack {
-                    Text(title).font(.callout.weight(.semibold))
-                    Spacer(minLength: 0)
-                    if isLoaded {
-                        Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
-                    }
-                }
-                if !subtitle.isEmpty {
-                    Text(subtitle)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                Text(isLoaded ? String(localized: "Ready") : String(localized: "Included"))
-                    .font(.caption2.weight(.medium))
-                    .foregroundStyle(isLoaded ? .green : .blue)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(10)
-            .background(RoundedRectangle(cornerRadius: 8).fill(isSelected ? Color.blue.opacity(0.18) : Color.white.opacity(0.05)))
-            .overlay(RoundedRectangle(cornerRadius: 8).stroke(isSelected ? Color.blue : Color.white.opacity(0.12), lineWidth: isSelected ? 1.5 : 1))
-        }
-        .buttonStyle(.plain)
-        .disabled(isActivatingParakeet)
-    }
-
-    @ViewBuilder
-    private func downloadableParakeetModelSetupControls(engine: any TranscriptionEngine) -> some View {
-        let models = engine.models
-        let fallbackModelId = engine.selectedModelID
-            ?? SetupWizardParakeetRecommendation.preferredModelId(from: models)
-            ?? ""
-        let requestedModelId = selectedParakeetModelId ?? fallbackModelId
-        let isRequestedModelLoaded = SetupWizardParakeetModelSelection.isLoaded(
-            requestedModelId: requestedModelId,
-            loadedModelId: engine.selectedModelID,
-            isConfigured: engine.isReady
-        )
-
-        HStack(spacing: 12) {
-            Picker(
-                String(localized: "Model"),
-                selection: Binding(
-                    get: { requestedModelId },
-                    set: { selectedParakeetModelId = $0 }
-                )
-            ) {
-                ForEach(models, id: \.id) { model in
-                    Text(model.displayName).tag(model.id)
-                }
-            }
-            .pickerStyle(.menu)
-            .disabled(isActivatingParakeet || models.isEmpty)
-
-            Spacer()
-
-            Button {
-                Task {
-                    await activateParakeetForSetup(modelId: requestedModelId)
-                }
-            } label: {
-                Label(
-                    isRequestedModelLoaded
-                        ? String(localized: "Loaded")
-                        : parakeetSetupActivity?.isError == true
-                        ? String(localized: "Retry")
-                        : String(localized: "Download & Load"),
-                    systemImage: isRequestedModelLoaded ? "checkmark.circle.fill" : "arrow.down.circle.fill"
-                )
-            }
-            .buttonStyle(.borderedProminent)
-            .controlSize(.small)
-            .disabled(isActivatingParakeet || requestedModelId.isEmpty || isRequestedModelLoaded)
-        }
-
-        if parakeetSetupActivity?.isError == true, let message = parakeetSetupActivity?.message {
-            Label(message, systemImage: "exclamationmark.triangle.fill")
-                .font(.caption)
-                .foregroundStyle(.orange)
-                .frame(maxWidth: .infinity, alignment: .leading)
-        }
-    }
-
-    @MainActor
-    private func activateParakeetForSetup(modelId requestedModelId: String? = nil) async {
-        guard !isActivatingParakeet else { return }
-
-        manuallySelectedSetupProviderId = SetupWizardParakeetRecommendation.providerId
-        parakeetSetupActivity = nil
-        isActivatingParakeet = true
-        defer { isActivatingParakeet = false }
-
-        guard let engine = await waitForParakeetEngine() else { return }
-
-        modelManager.selectProvider(engine.id)
-
-        if !engine.isReady || requestedModelId != nil {
-            let modelId = requestedModelId
-                ?? engine.selectedModelID
-                ?? SetupWizardParakeetRecommendation.preferredModelId(from: engine.models)
-            if let modelId {
-                selectedParakeetModelId = modelId
-                engine.selectModel(id: modelId)
-            }
-        }
-
-        do {
-            try await engine.prepareModel(id: requestedModelId, allowDownloads: !engine.usesBundledModels)
-            parakeetSetupActivity = nil
-        } catch {
-            parakeetSetupActivity = SetupModelActivity(
-                message: error.localizedDescription,
-                progress: nil,
-                isError: true
-            )
-        }
-    }
-
-    @MainActor
-    private func waitForParakeetEngine() async -> (any TranscriptionEngine)? {
-        for _ in 0..<40 {
-            if Task.isCancelled { return nil }
-            if let parakeetEngine {
-                return parakeetEngine
-            }
-            try? await Task.sleep(for: .milliseconds(100))
-        }
-
-        return parakeetEngine
-    }
-
-    private func recommendationDescription(
-        fallback: String,
-        availability: SetupWizardRecommendationAvailability
-    ) -> String {
-        guard availability == .unavailable(.appleSiliconOnly) else {
-            return fallback
-        }
-
-        return String(localized: "Parakeet requires Apple Silicon.")
-    }
-
-    // MARK: - Finish
-
-    private var finishStep: some View {
-        VStack(spacing: 14) {
-            HStack(spacing: 8) {
-                Image(systemName: "keyboard")
-                    .foregroundStyle(.blue)
-                hotkeyChip(label: primaryHotkeyLabel)
-            }
-            .font(.callout)
-
-            TextEditor(text: $trialText)
-                .font(.body)
-                .frame(minHeight: 112)
-                .scrollContentBackground(.hidden)
-                .padding(10)
-                .background(RoundedRectangle(cornerRadius: 8).fill(Color.white.opacity(0.07)))
-                .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(Color.white.opacity(0.16), lineWidth: 1))
-                .focused($isTrialFieldFocused)
-                .accessibilityLabel(String(localized: "Try dictation text field"))
-                .accessibilityHint(String(localized: "Press your hotkey and dictate. Inserted text appears here."))
-
-            if trialSuccess {
-                setupCard(isSelected: false) {
-                    HStack(spacing: 14) {
-                        Image(systemName: "checkmark.circle.fill")
-                            .font(.title2)
-                            .foregroundStyle(.green)
-
-                        VStack(alignment: .leading, spacing: 3) {
-                            Text(String(localized: "You're all set!"))
-                                .font(.headline)
-                            Text(String(localized: "Leise is ready to help you work faster."))
-                                .font(.callout)
-                                .foregroundStyle(.secondary)
-                        }
-
-                        Spacer()
-                    }
-                }
-                .transition(.opacity.combined(with: .scale(scale: 0.96)))
-            } else {
-                setupCard(isSelected: false) {
-                    HStack(spacing: 14) {
-                        Image(systemName: readinessIcon)
-                            .font(.title2)
-                            .foregroundStyle(readinessColor)
-
-                        VStack(alignment: .leading, spacing: 3) {
-                            Text(readinessTitle)
-                                .font(.headline)
-                            Text(readinessDescription)
-                                .font(.callout)
-                                .foregroundStyle(.secondary)
-                        }
-
-                        Spacer()
-                    }
-                }
-            }
-        }
-        .onChange(of: dictation.state) { oldValue, newValue in
-            if case .inserting = oldValue, case .idle = newValue {
-                withAnimation(.spring(duration: 0.35)) {
-                    trialSuccess = true
-                }
-            }
-        }
-        .task {
-            try? await Task.sleep(for: .milliseconds(50))
-            isTrialFieldFocused = true
-        }
-    }
-
-    private var readinessIcon: String {
-        hasEngineReadyForSetupTest && hasAnyTriggerHotkey ? "sparkles" : "exclamationmark.triangle.fill"
-    }
-
-    private var readinessColor: Color {
-        hasEngineReadyForSetupTest && hasAnyTriggerHotkey ? .blue : .orange
-    }
-
-    private var readinessTitle: String {
-        hasEngineReadyForSetupTest && hasAnyTriggerHotkey
-            ? String(localized: "Try it out")
-            : String(localized: "Setup can be finished later")
-    }
-
-    private var readinessDescription: String {
-        if !hasEngineReadyForSetupTest {
-            return String(localized: "Parakeet still needs to be set up before dictation can run.")
-        }
-        if !hasAnyTriggerHotkey {
-            return String(localized: "A hotkey still needs to be set before dictation can start.")
-        }
-        return String(localized: "Press your hotkey and say something.")
-    }
-
-    // MARK: - Shared Helpers
-
-    private var canProceed: Bool {
-        switch currentWizardStep {
-        case .permissions:
-            return true
-        case .hotkey:
-            return canProceedFromHotkey
-        case .engineAI:
-            return !isActivatingParakeet
-        default:
-            return true
-        }
-    }
-
-    private var canProceedFromHotkey: Bool {
-        if hasAnyTriggerHotkey { return true }
-        if !dictation.hotkeys(for: selectedHotkeyMode).isEmpty { return true }
-        return selectedHotkeyMode == .hybrid && recommendedHotkeyResolution.shouldApply
-    }
-
-    private var hasEngineReadyForSetupTest: Bool {
-        guard let engine = selectedTranscriptionEngineForSetup else { return false }
-        return canUseEngineForSetupTest(engine)
-    }
-
-    private var selectedTranscriptionEngineForSetup: (any TranscriptionEngine)? {
-        modelManager.engine(for: modelManager.selectedProviderId)
-    }
-
-    private var parakeetEngine: (any TranscriptionEngine)? {
-        modelManager.engine(for: SetupWizardParakeetRecommendation.providerId)
-    }
-
-    private var isParakeetReadyForSetup: Bool {
-        guard let parakeetEngine else { return false }
-        return canUseEngineForSetupTest(parakeetEngine)
-    }
-
-    private func canUseEngineForSetupTest(_ engine: any TranscriptionEngine) -> Bool {
-        SetupWizardEngineReadiness.isReady(
-            canUseForTranscription: modelManager.canUseForTranscription(engine),
-            isConfigured: engine.isReady
-        )
-    }
-
-    @MainActor
-    private func preparePreferredSetupEngineIfNeeded() async {
-        guard !isActivatingParakeet else { return }
-
-        if let manuallySelectedSetupProviderId,
-           let manuallySelectedEngine = modelManager.engine(for: manuallySelectedSetupProviderId),
-           canUseEngineForSetupTest(manuallySelectedEngine) {
-            modelManager.selectProvider(manuallySelectedEngine.id)
-            return
-        }
-
-        let selectedEngineReady = selectedTranscriptionEngineForSetup.map(canUseEngineForSetupTest) ?? false
-        let preferredProviderId = SetupWizardEngineSelection.preferredProviderId(
-            selectedProviderId: modelManager.selectedProviderId,
-            selectedEngineReady: selectedEngineReady,
-            parakeetReady: isParakeetReadyForSetup
-        )
-
-        if preferredProviderId == SetupWizardParakeetRecommendation.providerId, let parakeetEngine {
-            modelManager.selectProvider(parakeetEngine.id)
-        }
-    }
-
-
-    private var hasAnyTriggerHotkey: Bool {
-        SetupWizardDefaultHotkey.triggerSlots.contains { !dictation.hotkeys(for: $0).isEmpty }
-    }
-
-    private var recommendedHotkeyResolution: SetupWizardDefaultHotkey.Resolution {
-        SetupWizardDefaultHotkey.resolve(
-            existingTriggerHotkeys: SetupWizardDefaultHotkey.triggerSlots.reduce(into: [:]) { result, slot in
-                result[slot] = dictation.hotkeys(for: slot)
-            },
-            conflictingSlot: dictation.isHotkeyAssigned(SetupWizardDefaultHotkey.recommendedHybridHotkey, excluding: .hybrid)
-        )
-    }
-
-    private func applyRecommendedHotkeyIfNeeded() {
-        guard selectedHotkeyMode == .hybrid,
-              recommendedHotkeyResolution.shouldApply else {
-            return
-        }
-
-        dictation.setHotkey(SetupWizardDefaultHotkey.recommendedHybridHotkey, for: .hybrid)
-    }
-
-    private var primaryHotkeyLabel: String {
-        for slot in SetupWizardDefaultHotkey.triggerSlots {
-            let label = hotkeyLabel(for: slot)
-            if !label.isEmpty { return label }
-        }
-        return String(localized: "No hotkey")
-    }
-
-    private func displayedHotkeyLabel(for mode: HotkeySlotType) -> String {
-        let label = hotkeyLabel(for: mode)
-        if !label.isEmpty { return label }
-        if mode == .hybrid, recommendedHotkeyResolution.shouldApply {
-            return HotkeyService.displayName(for: SetupWizardDefaultHotkey.recommendedHybridHotkey)
-        }
-        return String(localized: "Not set")
-    }
-
-    private func hotkeyLabel(for mode: HotkeySlotType) -> String {
-        switch mode {
-        case .hybrid: return dictation.hybridHotkeyLabel
-        case .pushToTalk: return dictation.pttHotkeyLabel
-        case .toggle: return dictation.toggleHotkeyLabel
-        case .recentTranscriptions: return dictation.recentTranscriptionsHotkeyLabel
-        case .copyLastTranscription: return dictation.copyLastTranscriptionHotkeyLabel
-        case .recorderToggle: return dictation.recorderToggleHotkeyLabel
-        }
-    }
-
-    private func hotkeyModeTitle(for mode: HotkeySlotType) -> String {
-        switch mode {
-        case .hybrid: return String(localized: "Hybrid")
-        case .pushToTalk: return String(localized: "Push-to-Talk")
-        case .toggle: return String(localized: "Toggle")
-        case .recentTranscriptions: return String(localized: "Recent Transcriptions")
-        case .copyLastTranscription: return String(localized: "Copy Last Transcription")
-        case .recorderToggle: return String(localized: "settings.tab.recorder")
-        }
-    }
-
-    private func setupCard<Content: View>(
-        isSelected: Bool,
-        @ViewBuilder content: () -> Content
-    ) -> some View {
-        content()
-            .padding(12)
-            .background(
-                RoundedRectangle(cornerRadius: 8)
-                    .fill(isSelected ? Color.blue.opacity(0.12) : Color.white.opacity(0.07))
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 8)
-                    .strokeBorder(isSelected ? Color.blue.opacity(0.65) : Color.white.opacity(0.11), lineWidth: 1)
-            )
-    }
-
-    private func statusPill(_ text: String, systemImage: String, color: Color) -> some View {
-        Label(text, systemImage: systemImage)
-            .font(.caption.weight(.semibold))
-            .padding(.horizontal, 9)
-            .padding(.vertical, 5)
-            .background(color.opacity(0.16))
-            .foregroundStyle(color)
-            .clipShape(Capsule())
-            .lineLimit(1)
-    }
-
-    private func hotkeyChip(label: String) -> some View {
-        Text(label)
-            .font(.callout.weight(.semibold))
-            .padding(.horizontal, 10)
-            .padding(.vertical, 5)
-            .background(RoundedRectangle(cornerRadius: 6).fill(Color.white.opacity(0.10)))
-            .overlay(RoundedRectangle(cornerRadius: 6).strokeBorder(Color.white.opacity(0.14), lineWidth: 1))
-            .lineLimit(1)
-    }
-}
-
-private enum SetupWizardStep: Int, CaseIterable, Identifiable {
+enum SetupWizardStep: Int, CaseIterable, Identifiable {
     case welcome
-    case permissions
-    case hotkey
-    case engineAI
-    case finish
+    case access
+    case shortcut
+    case tryIt
 
     var id: Int { rawValue }
+    var number: Int { rawValue + 1 }
 
-    var progressTitle: String {
+    /// Restores a saved step, including one saved by the earlier five-step
+    /// wizard: its "AI & Engine" and "Finish" steps both map to "Try it".
+    static func restored(fromSavedIndex index: Int) -> SetupWizardStep {
+        SetupWizardStep(rawValue: min(max(index, 0), allCases.count - 1)) ?? .welcome
+    }
+
+    var title: String {
         switch self {
+        case .welcome: String(localized: "Welcome to Leise")
+        case .access: String(localized: "Two permissions, then you’re ready")
+        case .shortcut: String(localized: "Hold or tap")
+        case .tryIt: String(localized: "Try it out")
+        }
+    }
+
+    var previous: SetupWizardStep? { SetupWizardStep(rawValue: rawValue - 1) }
+    var next: SetupWizardStep? { SetupWizardStep(rawValue: rawValue + 1) }
+}
+
+/// Which way the last step change went; steps slide in from that side.
+enum SetupTravel: Equatable {
+    case forward
+    case backward
+    case inPlace
+
+    var edgeSign: CGFloat {
+        switch self {
+        case .forward: 1
+        case .backward: -1
+        case .inPlace: 0
+        }
+    }
+}
+
+/// The footer's main button. On "Zugriff" it follows the permissions: first
+/// the microphone, then (with Bedienungshilfen still missing) a plain "Später"
+/// while the row's "Freigeben …" becomes the primary action.
+enum SetupPrimaryAction: Equatable {
+    case begin
+    case allowMicrophone
+    case later
+    case next
+    case finish
+
+    static func resolve(
+        step: SetupWizardStep,
+        microphoneGranted: Bool,
+        accessibilityGranted: Bool
+    ) -> SetupPrimaryAction {
+        switch step {
         case .welcome:
-            String(localized: "Welcome")
-        case .permissions:
-            String(localized: "Permissions")
-        case .hotkey:
-            String(localized: "Hotkey")
-        case .engineAI:
-            String(localized: "AI & Engine")
-        case .finish:
-            String(localized: "Finish")
+            .begin
+        case .access:
+            if !microphoneGranted { .allowMicrophone } else if !accessibilityGranted { .later } else { .next }
+        case .shortcut:
+            .next
+        case .tryIt:
+            .finish
         }
     }
 
     var title: String {
         switch self {
-        case .welcome:
-            String(localized: "Welcome to Leise")
-        case .permissions:
-            String(localized: "Permissions")
-        case .hotkey:
-            String(localized: "Choose Your Hotkey")
-        case .engineAI:
-            String(localized: "AI & Engine")
-        case .finish:
-            String(localized: "Try It Out")
+        case .begin: String(localized: "Let’s Go")
+        case .allowMicrophone: String(localized: "Allow Microphone")
+        case .later: String(localized: "Later")
+        case .next: String(localized: "Next")
+        case .finish: String(localized: "Finish")
         }
     }
 
-    var subtitle: String {
-        switch self {
-        case .welcome:
-            String(localized: "Set up voice typing in a few simple steps.")
-        case .permissions:
-            String(localized: "Leise needs access to work on your Mac.")
-        case .hotkey:
-            String(localized: "Start and stop dictation without leaving your app.")
-        case .engineAI:
-            String(localized: "Local defaults are ready first; cloud providers can wait.")
-        case .finish:
-            String(localized: "Press your hotkey and say something.")
+    var isProminent: Bool { self != .later }
+
+    /// Whether the row's "Freigeben …" takes over the default action.
+    static func accessibilityRowIsPrimary(microphoneGranted: Bool, accessibilityGranted: Bool) -> Bool {
+        microphoneGranted && !accessibilityGranted
+    }
+}
+
+// MARK: - Model chip
+
+/// Short, human names for the two Parakeet models.
+enum ParakeetModelNaming {
+    static func shortName(forModelID modelID: String?) -> String? {
+        switch modelID {
+        case SetupWizardParakeetRecommendation.v3ModelId?: "Parakeet v3"
+        case SetupWizardParakeetRecommendation.v2ModelId?: "Parakeet v2"
+        default: nil
+        }
+    }
+
+    static func isMultilingual(modelID: String?) -> Bool {
+        modelID == SetupWizardParakeetRecommendation.v3ModelId
+    }
+}
+
+/// The footer chip that reports the background model download.
+struct SetupModelChip: Equatable {
+    enum Phase: Equatable {
+        /// Nothing reported yet (the first instant after setup opens).
+        case starting
+        /// Transferring files, with the fraction of all bytes.
+        case downloading(fractionCompleted: Double)
+        /// Files are on disk; Core ML loads and warms the model up.
+        case preparing
+        case ready
+        case failed
+        case unsupported
+    }
+
+    var phase: Phase
+    var modelID: String?
+
+    static func resolve(
+        isSupported: Bool,
+        engineReady: Bool,
+        selectedModelID: String?,
+        status: ModelPreparationStatus?,
+        activity: ParakeetModelActivity?,
+        didFail: Bool
+    ) -> SetupModelChip {
+        guard isSupported else { return SetupModelChip(phase: .unsupported, modelID: selectedModelID) }
+        if engineReady { return SetupModelChip(phase: .ready, modelID: selectedModelID) }
+
+        switch activity {
+        case let .downloading(modelID, fraction)?:
+            return SetupModelChip(phase: .downloading(fractionCompleted: min(max(fraction, 0), 1)), modelID: modelID)
+        case let .loading(modelID)?:
+            return SetupModelChip(phase: .preparing, modelID: modelID)
+        case nil:
+            break
+        }
+
+        switch status {
+        case .preparing?:
+            return SetupModelChip(phase: .preparing, modelID: selectedModelID)
+        case .failed?:
+            return SetupModelChip(phase: .failed, modelID: selectedModelID)
+        case .ready?:
+            return SetupModelChip(phase: .ready, modelID: selectedModelID)
+        case .idle?, nil:
+            return SetupModelChip(phase: didFail ? .failed : .starting, modelID: selectedModelID)
+        }
+    }
+
+    var isReady: Bool { phase == .ready }
+
+    /// The bar's fill, or nil when there is no bar (ready, failed) or no
+    /// fraction yet (indeterminate).
+    var barFraction: Double? {
+        if case let .downloading(fraction) = phase { return fraction }
+        return nil
+    }
+
+    var showsBar: Bool {
+        switch phase {
+        case .starting, .downloading, .preparing: true
+        case .ready, .failed, .unsupported: false
+        }
+    }
+
+    var text: String {
+        let multilingual = ParakeetModelNaming.isMultilingual(modelID: modelID)
+        switch phase {
+        case .starting, .preparing:
+            return multilingual
+                ? String(localized: "Preparing the multilingual model…")
+                : String(localized: "Preparing the language model…")
+        case let .downloading(fraction):
+            let percent = fraction.formatted(.percent.precision(.fractionLength(0)))
+            return multilingual
+                ? String(localized: "Multilingual model loading · \(percent)")
+                : String(localized: "English model loading · \(percent)")
+        case .ready:
+            let name = ParakeetModelNaming.shortName(forModelID: modelID) ?? "Parakeet"
+            return String(localized: "Language model ready · \(name)")
+        case .failed:
+            return String(localized: "The language model couldn’t load")
+        case .unsupported:
+            return SetupWizardRecommendationUnavailableReason.appleSiliconOnly.message
         }
     }
 }
+
+/// Which model setup prepares. New installs get the language default; an
+/// existing English-only choice is upgraded only when the user's languages
+/// need the multilingual model, and a working multilingual setup is kept.
+enum SetupModelChoice {
+    static func targetModelID(currentModelID: String?, recommendedModelID: String) -> String {
+        guard let currentModelID else { return recommendedModelID }
+        if currentModelID == SetupWizardParakeetRecommendation.v2ModelId,
+           recommendedModelID == SetupWizardParakeetRecommendation.v3ModelId {
+            return recommendedModelID
+        }
+        return currentModelID
+    }
+}
+
+// MARK: - Shortcut
+
+/// The dictation shortcut as setup shows it, including the fn default that
+/// setup saves when you continue past the shortcut step.
+struct SetupShortcutDisplay: Equatable {
+    var label: String
+    var isFn: Bool
+    /// Hybrid and push-to-talk shortcuts are held; toggle shortcuts are pressed.
+    var isHeld: Bool
+    /// fn is shown but not saved yet.
+    var isPending: Bool
+    var isConfigured: Bool
+
+    static let fnLabel = "fn"
+
+    static func resolve(
+        hotkeys: [HotkeySlotType: [UnifiedHotkey]],
+        recommendedApplies: Bool
+    ) -> SetupShortcutDisplay {
+        for slot in SetupWizardDefaultHotkey.triggerSlots {
+            guard let hotkey = hotkeys[slot]?.first else { continue }
+            return SetupShortcutDisplay(
+                label: displayLabel(for: hotkey),
+                isFn: hotkey.isFn,
+                isHeld: slot != .toggle,
+                isPending: false,
+                isConfigured: true
+            )
+        }
+        if recommendedApplies {
+            return SetupShortcutDisplay(label: fnLabel, isFn: true, isHeld: true, isPending: true, isConfigured: true)
+        }
+        return SetupShortcutDisplay(
+            label: String(localized: "Not set"),
+            isFn: false,
+            isHeld: true,
+            isPending: false,
+            isConfigured: false
+        )
+    }
+
+    /// Apple prints a lowercase "fn" on the key, so plain fn reads that way.
+    static func displayLabel(for hotkey: UnifiedHotkey) -> String {
+        if hotkey.isFn, !hotkey.isDoubleTap { return fnLabel }
+        return HotkeyService.displayName(for: hotkey)
+    }
+
+    /// The instruction under "Probier es aus".
+    var tryItInstruction: String {
+        guard isConfigured else { return String(localized: "Set a dictation shortcut first, then come back here.") }
+        return isHeld
+            ? String(localized: "Hold \(label) and say a sentence.")
+            : String(localized: "Press \(label), say a sentence, then press it again.")
+    }
+}
+
+// MARK: - Model
+
+/// Drives the setup window. Main-actor confined; it observes only the
+/// published values it needs, so the window does not redraw at audio-level rate.
+@MainActor
+final class SetupWizardModel: ObservableObject {
+    @Published private(set) var step: SetupWizardStep
+    @Published private(set) var travel: SetupTravel = .forward
+    @Published private(set) var microphoneGranted: Bool
+    @Published private(set) var accessibilityGranted: Bool
+    @Published private(set) var modelChip: SetupModelChip
+    @Published private(set) var shortcut: SetupShortcutDisplay
+    @Published private(set) var isDictating = false
+    @Published private(set) var trialSucceeded = false
+    @Published var trialText = "" {
+        didSet { evaluateTrial() }
+    }
+
+    private let dictation: DictationViewModel
+    private let modelManager: ModelManagerService
+    private let homeViewModel: HomeViewModel
+    private let announcer: AccessibilityAnnouncementService
+    private let defaults: UserDefaults
+    private var cancellables = Set<AnyCancellable>()
+    private var permissionPollTask: Task<Void, Never>?
+    private var modelPreparationTask: Task<Void, Never>?
+    private var trialSuccessTask: Task<Void, Never>?
+    private var modelPreparationFailed = false
+    private var transcriptsSinceTrialStarted = 0
+    private var isStarted = false
+
+    private static let permissionPollInterval: Duration = .seconds(1)
+    /// Lets the inserted text land before the title changes.
+    private static let trialSuccessDelay: Duration = .milliseconds(600)
+
+    init(
+        dictation: DictationViewModel = ServiceContainer.shared.dictationViewModel,
+        modelManager: ModelManagerService = ServiceContainer.shared.modelManagerService,
+        homeViewModel: HomeViewModel = ServiceContainer.shared.homeViewModel,
+        announcer: AccessibilityAnnouncementService = ServiceContainer.shared.accessibilityAnnouncementService,
+        defaults: UserDefaults = .standard
+    ) {
+        self.dictation = dictation
+        self.modelManager = modelManager
+        self.homeViewModel = homeViewModel
+        self.announcer = announcer
+        self.defaults = defaults
+        step = SetupWizardStep.restored(fromSavedIndex: defaults.integer(forKey: UserDefaultsKeys.setupWizardCurrentStep))
+        microphoneGranted = !dictation.needsMicPermission
+        accessibilityGranted = !dictation.needsAccessibilityPermission
+        modelChip = SetupModelChip(phase: .starting, modelID: nil)
+        shortcut = SetupShortcutDisplay(label: SetupShortcutDisplay.fnLabel, isFn: true, isHeld: true, isPending: true, isConfigured: true)
+        refreshModelChip()
+        refreshShortcut()
+    }
+
+    var primaryAction: SetupPrimaryAction {
+        SetupPrimaryAction.resolve(step: step, microphoneGranted: microphoneGranted, accessibilityGranted: accessibilityGranted)
+    }
+
+    var accessibilityRowIsPrimary: Bool {
+        step == .access && SetupPrimaryAction.accessibilityRowIsPrimary(
+            microphoneGranted: microphoneGranted,
+            accessibilityGranted: accessibilityGranted
+        )
+    }
+
+    /// The globe notice treats a pending fn as saved: it will be once you continue.
+    var assumesFnShortcut: Bool { shortcut.isFn && shortcut.isPending }
+
+    // MARK: Lifecycle
+
+    func start() {
+        guard !isStarted else { return }
+        isStarted = true
+        observe()
+        refreshPermissions()
+        prepareModelIfNeeded()
+        updatePermissionPolling()
+        announceStep()
+    }
+
+    func stop() {
+        isStarted = false
+        cancellables.removeAll()
+        permissionPollTask?.cancel()
+        permissionPollTask = nil
+        trialSuccessTask?.cancel()
+        trialSuccessTask = nil
+        // The model download keeps running: it belongs to the engine, and
+        // dictation needs the model whether or not setup stays open.
+    }
+
+    func restartFromBeginning() {
+        trialSuccessTask?.cancel()
+        trialSuccessTask = nil
+        trialSucceeded = false
+        trialText = ""
+        transcriptsSinceTrialStarted = 0
+        modelPreparationFailed = false
+        move(to: .welcome, travel: .backward)
+        prepareModelIfNeeded()
+    }
+
+    private func observe() {
+        modelManager.objectWillChange
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                MainActor.assumeIsolated { self?.refreshModelChip() }
+            }
+            .store(in: &cancellables)
+
+        dictation.$state
+            .map { $0 != .idle }
+            .removeDuplicates()
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] active in
+                MainActor.assumeIsolated { self?.isDictating = active }
+            }
+            .store(in: &cancellables)
+
+        dictation.$lastTranscribedText
+            .dropFirst()
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                MainActor.assumeIsolated { self?.noteTranscript() }
+            }
+            .store(in: &cancellables)
+
+        dictation.$hotkeyLabelsVersion
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                MainActor.assumeIsolated { self?.refreshShortcut() }
+            }
+            .store(in: &cancellables)
+
+        NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                MainActor.assumeIsolated { self?.refreshPermissions() }
+            }
+            .store(in: &cancellables)
+    }
+
+    // MARK: Navigation
+
+    func performPrimaryAction() -> SetupPrimaryAction {
+        let action = primaryAction
+        switch action {
+        case .begin, .later, .next:
+            advance()
+        case .allowMicrophone:
+            requestMicrophone()
+        case .finish:
+            break // The view finishes, because it owns dismissal.
+        }
+        return action
+    }
+
+    func advance() {
+        guard let next = step.next else { return }
+        if step == .shortcut { applyRecommendedHotkeyIfNeeded() }
+        move(to: next, travel: .forward)
+    }
+
+    func goBack() {
+        guard let previous = step.previous else { return }
+        move(to: previous, travel: .backward)
+    }
+
+    /// Finishes or skips setup. fn becomes the shortcut if none exists, so
+    /// dictation works either way.
+    func complete() {
+        applyRecommendedHotkeyIfNeeded()
+        homeViewModel.completeSetupWizard()
+        announcer.announce(String(localized: "Setup complete"))
+    }
+
+    private func move(to newStep: SetupWizardStep, travel newTravel: SetupTravel) {
+        guard newStep != step else { return }
+        travel = newTravel
+        withLeiseAnimation(LeiseMotion.ui) {
+            step = newStep
+        }
+        defaults.set(newStep.rawValue, forKey: UserDefaultsKeys.setupWizardCurrentStep)
+        if newStep == .tryIt {
+            transcriptsSinceTrialStarted = 0
+        }
+        refreshPermissions()
+        updatePermissionPolling()
+        announceStep()
+    }
+
+    private func announceStep() {
+        let total = SetupWizardStep.allCases.count
+        announcer.announce(String(localized: "\(step.title). Step \(step.number) of \(total). \(stepAnnouncementDetail)"))
+    }
+
+    private var stepAnnouncementDetail: String {
+        switch step {
+        case .welcome: String(localized: "Speak, and the text is there. In any app, without an account, and everything stays on your Mac.")
+        case .access: String(localized: "Leise only listens while you dictate or record.")
+        case .shortcut: String(localized: "Hold: Leise listens until you let go. Tap: once starts, again stops.")
+        case .tryIt: shortcut.tryItInstruction
+        }
+    }
+
+    // MARK: Permissions
+
+    func requestMicrophone() {
+        dictation.requestMicPermission()
+    }
+
+    func requestAccessibility() {
+        dictation.requestAccessibilityPermission()
+    }
+
+    private func updatePermissionPolling() {
+        permissionPollTask?.cancel()
+        permissionPollTask = nil
+        guard isStarted, step == .access else { return }
+        permissionPollTask = Task { [weak self] in
+            while !Task.isCancelled {
+                try? await Task.sleep(for: Self.permissionPollInterval)
+                guard !Task.isCancelled else { return }
+                self?.refreshPermissions()
+            }
+        }
+    }
+
+    private func refreshPermissions() {
+        let microphone = !dictation.needsMicPermission
+        let accessibility = !dictation.needsAccessibilityPermission
+        if microphone != microphoneGranted {
+            withLeiseAnimation(LeiseMotion.moment) { microphoneGranted = microphone }
+            if microphone { announcer.announce(String(localized: "Microphone allowed")) }
+        }
+        if accessibility != accessibilityGranted {
+            withLeiseAnimation(LeiseMotion.moment) { accessibilityGranted = accessibility }
+            if accessibility { announcer.announce(String(localized: "Accessibility allowed")) }
+        }
+    }
+
+    // MARK: Shortcut
+
+    func recordShortcut(_ hotkey: UnifiedHotkey) {
+        if let conflict = dictation.isHotkeyAssigned(hotkey, excluding: .hybrid) {
+            dictation.clearHotkey(for: conflict)
+        }
+        dictation.setHotkey(hotkey, for: .hybrid)
+        refreshShortcut()
+    }
+
+    func clearShortcut() {
+        dictation.clearHotkey(for: .hybrid)
+        refreshShortcut()
+    }
+
+    var hybridShortcutLabel: String { dictation.hybridHotkeyLabel }
+
+    private var recommendedHotkeyResolution: SetupWizardDefaultHotkey.Resolution {
+        SetupWizardDefaultHotkey.resolve(
+            existingTriggerHotkeys: currentTriggerHotkeys,
+            conflictingSlot: dictation.isHotkeyAssigned(SetupWizardDefaultHotkey.recommendedHybridHotkey, excluding: .hybrid)
+        )
+    }
+
+    private var currentTriggerHotkeys: [HotkeySlotType: [UnifiedHotkey]] {
+        SetupWizardDefaultHotkey.triggerSlots.reduce(into: [:]) { result, slot in
+            result[slot] = dictation.hotkeys(for: slot)
+        }
+    }
+
+    private func applyRecommendedHotkeyIfNeeded() {
+        guard recommendedHotkeyResolution.shouldApply else { return }
+        dictation.setHotkey(SetupWizardDefaultHotkey.recommendedHybridHotkey, for: .hybrid)
+        refreshShortcut()
+    }
+
+    private func refreshShortcut() {
+        let resolved = SetupShortcutDisplay.resolve(
+            hotkeys: currentTriggerHotkeys,
+            recommendedApplies: recommendedHotkeyResolution.shouldApply
+        )
+        if resolved != shortcut { shortcut = resolved }
+    }
+
+    // MARK: Model
+
+    private var engine: (any TranscriptionEngine)? {
+        modelManager.engine(for: SetupWizardParakeetRecommendation.providerId)
+    }
+
+    private var isParakeetSupported: Bool {
+        SetupWizardRecommendationAvailability.resolve(
+            manifestId: SetupWizardParakeetRecommendation.manifestId,
+            isInstalled: engine != nil,
+            isReady: engine?.isReady ?? false,
+            hasBundledModels: engine?.usesBundledModels ?? false
+        ) != .unavailable(.appleSiliconOnly)
+    }
+
+    func retryModel() {
+        modelPreparationFailed = false
+        prepareModelIfNeeded()
+        refreshModelChip()
+    }
+
+    /// Starts the download in the background on the first step. Choosing
+    /// v3 for non-English languages keeps German from turning into English
+    /// gibberish, which is what plain v2 did as the default.
+    private func prepareModelIfNeeded() {
+        guard modelPreparationTask == nil, isParakeetSupported, let engine else {
+            refreshModelChip()
+            return
+        }
+        let target = SetupModelChoice.targetModelID(
+            currentModelID: engine.selectedModelID,
+            recommendedModelID: ParakeetDefaultModel.modelID(forPreferredLanguages: Locale.preferredLanguages)
+        )
+        modelManager.selectProvider(engine.id)
+        if engine.isReady, engine.selectedModelID == target {
+            refreshModelChip()
+            return
+        }
+        if case .preparing = engine.preparationStatus, engine.selectedModelID == target {
+            refreshModelChip()
+            return
+        }
+
+        let allowsDownloads = !engine.usesBundledModels
+        modelPreparationTask = Task { [weak self] in
+            do {
+                try await engine.prepareModel(id: target, allowDownloads: allowsDownloads)
+            } catch {
+                self?.modelPreparationFailed = true
+            }
+            self?.modelPreparationTask = nil
+            self?.refreshModelChip()
+        }
+        refreshModelChip()
+    }
+
+    private func refreshModelChip() {
+        let engine = engine
+        let resolved = SetupModelChip.resolve(
+            isSupported: isParakeetSupported,
+            engineReady: engine?.isReady ?? false,
+            selectedModelID: engine?.selectedModelID,
+            status: engine?.preparationStatus,
+            activity: (engine as? any ParakeetModelActivityReporting)?.modelActivity,
+            didFail: modelPreparationFailed
+        )
+        guard resolved != modelChip else { return }
+        let becameReady = resolved.isReady && !modelChip.isReady
+        withLeiseAnimation(LeiseMotion.ui) {
+            modelChip = resolved
+        }
+        if becameReady {
+            announcer.announce(resolved.text)
+        }
+    }
+
+    // MARK: Try it
+
+    private func noteTranscript() {
+        guard step == .tryIt else { return }
+        transcriptsSinceTrialStarted += 1
+        evaluateTrial()
+    }
+
+    /// Success needs both a finished dictation and its text in the field, so
+    /// typing alone does not count and a paste that missed the field does not either.
+    private func evaluateTrial() {
+        guard step == .tryIt,
+              !trialSucceeded,
+              trialSuccessTask == nil,
+              transcriptsSinceTrialStarted > 0,
+              !trialText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+        trialSuccessTask = Task { [weak self] in
+            try? await Task.sleep(for: Self.trialSuccessDelay)
+            guard !Task.isCancelled, let self else { return }
+            self.trialSuccessTask = nil
+            withLeiseAnimation(LeiseMotion.moment) {
+                self.trialSucceeded = true
+            }
+            self.announcer.announce(String(localized: "Set up and ready"))
+        }
+    }
+}
+
+// MARK: - View
+
+struct SetupWizardView: View {
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @StateObject private var model = SetupWizardModel()
+
+    static let windowSize = CGSize(width: 720, height: 540)
+    /// The titlebar band when SwiftUI reports no safe area for it.
+    private static let fallbackTitlebarHeight: CGFloat = 28
+    /// How far a step travels while it fades in, like the preview's 14 px.
+    private static let stepTravelDistance: CGFloat = 14
+
+    var body: some View {
+        GeometryReader { proxy in
+            let titlebarHeight = max(proxy.safeAreaInsets.top, Self.fallbackTitlebarHeight)
+            VStack(spacing: 0) {
+                titlebar
+                    .frame(height: titlebarHeight)
+                stage
+                Divider()
+                footer
+            }
+            .ignoresSafeArea(.container, edges: .top)
+        }
+        .frame(width: Self.windowSize.width, height: Self.windowSize.height)
+        .background(Color(nsColor: .windowBackgroundColor))
+        .onAppear { model.start() }
+        .onDisappear { model.stop() }
+        .onReceive(NotificationCenter.default.publisher(for: .resetSetupWizardWindow)) { _ in
+            model.restartFromBeginning()
+        }
+    }
+
+    // MARK: Titlebar
+
+    private var titlebar: some View {
+        ZStack {
+            SetupStepDots(current: model.step)
+
+            HStack {
+                Spacer()
+                Button(String(localized: "Skip Setup")) {
+                    finish()
+                }
+                .buttonStyle(.borderless)
+                .foregroundStyle(.secondary)
+                .keyboardShortcut(model.isDictating ? nil : .cancelAction)
+                .help(String(localized: "Finish setup later. fn becomes the dictation shortcut if none is set."))
+            }
+            .padding(.horizontal, LeiseSpacing.l)
+        }
+    }
+
+    // MARK: Stage
+
+    private var stage: some View {
+        GeometryReader { proxy in
+            ScrollView {
+                ZStack {
+                    stepView
+                        .id(model.step)
+                        .transition(stepTransition)
+                }
+                .padding(.horizontal, LeiseSpacing.xxxl)
+                .padding(.vertical, LeiseSpacing.xxl)
+                .frame(maxWidth: .infinity, minHeight: proxy.size.height)
+            }
+            .scrollBounceBehavior(.basedOnSize)
+            .scrollIndicators(.automatic)
+        }
+    }
+
+    @ViewBuilder
+    private var stepView: some View {
+        switch model.step {
+        case .welcome:
+            SetupWelcomeStep()
+        case .access:
+            SetupAccessStep(
+                microphoneGranted: model.microphoneGranted,
+                accessibilityGranted: model.accessibilityGranted,
+                accessibilityIsPrimary: model.accessibilityRowIsPrimary,
+                requestMicrophone: model.requestMicrophone,
+                requestAccessibility: model.requestAccessibility
+            )
+        case .shortcut:
+            SetupShortcutStep(
+                shortcut: model.shortcut,
+                assumesFnShortcut: model.assumesFnShortcut,
+                recorderLabel: model.hybridShortcutLabel,
+                onRecord: model.recordShortcut,
+                onClear: model.clearShortcut
+            )
+        case .tryIt:
+            SetupTryItStep(
+                text: $model.trialText,
+                isModelReady: model.modelChip.isReady,
+                succeeded: model.trialSucceeded,
+                instruction: model.shortcut.tryItInstruction
+            )
+        }
+    }
+
+    private var stepTransition: AnyTransition {
+        let distance = Self.stepTravelDistance * model.travel.edgeSign
+        guard !reduceMotion, distance != 0 else { return .opacity }
+        return .asymmetric(
+            insertion: .offset(x: distance).combined(with: .opacity),
+            removal: .opacity
+        )
+    }
+
+    // MARK: Footer
+
+    private var footer: some View {
+        HStack(spacing: LeiseSpacing.m) {
+            SetupModelChipView(chip: model.modelChip, retry: model.retryModel)
+
+            Spacer(minLength: LeiseSpacing.l)
+
+            Button(String(localized: "Back")) {
+                model.goBack()
+            }
+            .keyboardShortcut(.leftArrow, modifiers: [.command])
+            .opacity(model.step == .welcome ? 0 : 1)
+            .disabled(model.step == .welcome)
+            .accessibilityHidden(model.step == .welcome)
+
+            primaryButton
+        }
+        .controlSize(.large)
+        .padding(.horizontal, LeiseSpacing.xl)
+        .padding(.vertical, LeiseSpacing.m)
+    }
+
+    @ViewBuilder
+    private var primaryButton: some View {
+        let action = model.primaryAction
+        let button = Button(action.title) {
+            if model.performPrimaryAction() == .finish {
+                finish()
+            }
+        }
+        .keyboardShortcut(primaryShortcut(for: action))
+        .accessibilityHint(primaryHint(for: action))
+
+        if action.isProminent {
+            button
+                .buttonStyle(.borderedProminent)
+                .tint(LeiseColor.tintFill)
+        } else {
+            button
+                .buttonStyle(.bordered)
+        }
+    }
+
+    private func primaryShortcut(for action: SetupPrimaryAction) -> KeyboardShortcut? {
+        switch action {
+        case .finish:
+            KeyboardShortcut(.return, modifiers: [.command])
+        case .later:
+            // "Freigeben …" in the row owns Return while it is the primary action.
+            nil
+        case .begin, .allowMicrophone, .next:
+            .defaultAction
+        }
+    }
+
+    private func primaryHint(for action: SetupPrimaryAction) -> String {
+        action == .finish
+            ? String(localized: "Press Command Return to complete setup.")
+            : String(localized: "Press Return to continue.")
+    }
+
+    private func finish() {
+        model.complete()
+        dismiss()
+        DispatchQueue.main.async {
+            LeiseWindowNavigator.openOverview()
+        }
+    }
+}
+
+// MARK: - Shared setup decisions (kept for the wizard's existing tests)
 
 enum SetupWizardDefaultHotkey {
     enum BlockedReason: Equatable {
@@ -1415,29 +878,6 @@ enum SetupWizardDefaultHotkey {
         }
 
         return Resolution(shouldApply: true, blockedReason: nil)
-    }
-}
-
-extension SetupWizardParakeetRecommendation {
-    static var description: String {
-        String(localized: "Best local quality for daily dictation. Runs offline with no API key.")
-    }
-
-    static func bundledModelCopy(for model: TranscriptionModel) -> (title: String, subtitle: String) {
-        switch model.id {
-        case v2ModelId:
-            return (
-                String(localized: "English"),
-                String(localized: "Best for English dictation")
-            )
-        case v3ModelId:
-            return (
-                String(localized: "25 languages"),
-                String(localized: "For multilingual dictation")
-            )
-        default:
-            return (model.displayName, "")
-        }
     }
 }
 
@@ -1488,22 +928,5 @@ extension SetupWizardRecommendationUnavailableReason {
         case .builtInUnavailable:
             String(localized: "The built-in engine could not be loaded. Restart Leise and try again.")
         }
-    }
-}
-
-// MARK: - Recommendation Settings Button
-
-private struct RecommendationSettingsButton: View {
-    let manifestId: String
-
-    var body: some View {
-        Button {
-            ManagedAppWindowOpener.shared.open(id: "settings")
-        } label: {
-            Label(String(localized: "Setup"), systemImage: "gear")
-                .font(.caption)
-        }
-        .buttonStyle(.bordered)
-        .controlSize(.small)
     }
 }

@@ -1,5 +1,6 @@
 import Foundation
 import Combine
+import os
 import OSLog
 import SwiftUI
 import FluidAudio
@@ -99,6 +100,103 @@ public enum ParakeetRuntimeRecovery {
     }
 }
 
+// MARK: - Default model and preparation progress
+
+/// The model a fresh install starts with, chosen from the user's languages.
+public enum ParakeetDefaultModel {
+    public static var englishModelID: String { ParakeetVersion.v2.modelDef.id }
+    public static var multilingualModelID: String { ParakeetVersion.v3.modelDef.id }
+
+    /// v3 when any preferred language is one that v3 transcribes besides
+    /// English, otherwise the English-only v2. Plain v2 as the default turned
+    /// German dictation into English gibberish.
+    public static func modelID(forPreferredLanguages languages: [String]) -> String {
+        ParakeetVersion.preferredDefault(forPreferredLanguages: languages).modelDef.id
+    }
+}
+
+/// Where a model is while it gets ready, finer than `ModelPreparationStatus`.
+public enum ParakeetModelActivity: Equatable, Sendable {
+    /// Model files are being transferred. The fraction covers all bytes.
+    case downloading(modelID: String, fractionCompleted: Double)
+    /// The files are on disk; Core ML loads and warms the model up.
+    case loading(modelID: String)
+}
+
+/// Implemented by the Parakeet engine, for onboarding UI that shows a
+/// download percentage rather than a single preparing state.
+@MainActor
+public protocol ParakeetModelActivityReporting: AnyObject {
+    /// `nil` while idle, ready, or failed; `preparationStatus` covers those.
+    var modelActivity: ParakeetModelActivity? { get }
+}
+
+/// Bridges FluidAudio's progress callbacks, which arrive on any queue, to the
+/// main actor: at most one update per whole percent and one for the switch
+/// from downloading to loading.
+final class ParakeetModelProgressRelay: Sendable {
+    enum Update: Equatable, Sendable {
+        case downloading(fractionCompleted: Double)
+        case loading
+    }
+
+    private struct State: Sendable {
+        var lastPercent = -1
+        var isLoading = false
+    }
+
+    private let state = OSAllocatedUnfairLock(initialState: State())
+    private let sink: @MainActor @Sendable (Update) -> Void
+
+    init(sink: @escaping @MainActor @Sendable (Update) -> Void) {
+        self.sink = sink
+    }
+
+    var handler: DownloadUtils.ProgressHandler {
+        { [self] progress in
+            receive(progress)
+        }
+    }
+
+    func receive(_ progress: DownloadUtils.DownloadProgress) {
+        let update = Self.update(for: progress)
+        let shouldForward = state.withLock { state -> Bool in
+            guard !state.isLoading else { return false }
+            switch update {
+            case .loading:
+                state.isLoading = true
+                return true
+            case let .downloading(fraction):
+                let percent = Int((fraction * 100).rounded(.down))
+                guard percent > state.lastPercent else { return false }
+                state.lastPercent = percent
+                return true
+            }
+        }
+        guard shouldForward else { return }
+        let sink = sink
+        DispatchQueue.main.async {
+            MainActor.assumeIsolated {
+                sink(update)
+            }
+        }
+    }
+
+    /// FluidAudio maps the byte transfer to 0…0.5 and compiling to 0.5…1;
+    /// a model already on disk reports half-done with zero files.
+    static func update(for progress: DownloadUtils.DownloadProgress) -> Update {
+        switch progress.phase {
+        case .listing:
+            return .downloading(fractionCompleted: 0)
+        case let .downloading(_, totalFiles):
+            guard totalFiles > 0 else { return .loading }
+            return .downloading(fractionCompleted: min(max(progress.fractionCompleted / 0.5, 0), 1))
+        case .compiling:
+            return .loading
+        }
+    }
+}
+
 // MARK: - Engine implementation
 
 final class ParakeetEngineImplementation: TranscriptionEngine {
@@ -128,6 +226,12 @@ final class ParakeetEngineImplementation: TranscriptionEngine {
     private var modelLoadTask: Task<Void, Never>?
     private var modelLoadGeneration = UUID()
     fileprivate var downloadProgress: Double = 0
+    /// Download percentage and phase for onboarding UI; see `ParakeetModelActivityReporting`.
+    fileprivate(set) var modelActivity: ParakeetModelActivity? {
+        didSet {
+            if modelActivity != oldValue { stateSubject.send() }
+        }
+    }
     fileprivate var selectedVersion: ParakeetVersion = .v2
     fileprivate var _hfToken: String?
 
@@ -160,14 +264,20 @@ final class ParakeetEngineImplementation: TranscriptionEngine {
     var lastConfiguredPrompt: String?
     var lastBoostingTermCount: Int = 0
 
-    init(store: any ParakeetStore, restoresPersistedModel: Bool = true) {
+    init(
+        store: any ParakeetStore,
+        restoresPersistedModel: Bool = true,
+        preferredLanguages: [String] = Locale.preferredLanguages
+    ) {
         self.store = store
         _selectedModelId = store.userDefault(forKey: "selectedModel") as? String
         _hfToken = HuggingFaceTokenHelper.loadToken(from: store)
         vocabularyBoostingEnabled = store.userDefault(forKey: "vocabularyBoostingEnabled") as? Bool ?? false
+        var hasPersistedVersion = false
         if let versionString = store.userDefault(forKey: "selectedVersion") as? String,
            let version = ParakeetVersion(rawValue: versionString) {
             selectedVersion = version
+            hasPersistedVersion = true
         }
         if let selectedModelId = _selectedModelId,
            let version = ParakeetVersion.from(modelId: selectedModelId) {
@@ -179,6 +289,10 @@ final class ParakeetEngineImplementation: TranscriptionEngine {
             if let version = ParakeetVersion.from(modelId: persistedLoadedModel) {
                 selectedVersion = version
             }
+        }
+        if !hasPersistedVersion, _selectedModelId == nil {
+            // A new install: start with the model that fits the user's languages.
+            selectedVersion = ParakeetVersion.preferredDefault(forPreferredLanguages: preferredLanguages)
         }
         if restoresPersistedModel, store.shouldRestoreLoadedModelsPassively {
             Task { await restoreLoadedModel(allowDownloads: false) }
@@ -964,29 +1078,55 @@ final class ParakeetEngineImplementation: TranscriptionEngine {
         }
     }
 
+    /// How the coarse `downloadProgress` splits the work: the transfer fills
+    /// most of the bar, loading and warming up the model the rest.
+    private enum ProgressShare {
+        static let started = 0.05
+        static let downloaded = 0.8
+        static let loaded = 0.9
+        static let ready = 1.0
+    }
+
     private func performModelLoad(generation: UUID) async {
         let loadingVersion = selectedVersion
+        let modelID = loadingVersion.modelDef.id
+        let bundledDirectory = bundledAsrModelDirectory(for: loadingVersion)
+        if bundledDirectory == nil, !isModelDownloaded(version: loadingVersion) {
+            modelActivity = .downloading(modelID: modelID, fractionCompleted: 0)
+            downloadProgress = ProgressShare.started
+        } else {
+            modelActivity = .loading(modelID: modelID)
+            downloadProgress = ProgressShare.downloaded
+        }
         modelState = .downloading
-        downloadProgress = 0.1
+        let progressRelay = ParakeetModelProgressRelay { [weak self] update in
+            guard let self, self.modelLoadGeneration == generation else { return }
+            self.applyPreparationUpdate(update, modelID: modelID)
+        }
 
         do {
             let models: AsrModels
-            if let bundledDirectory = bundledAsrModelDirectory(for: loadingVersion) {
+            if let bundledDirectory {
                 disableFluidAudioNetwork(for: bundledDirectory)
                 try validateBundledAsrModel(at: bundledDirectory, version: loadingVersion)
                 models = try await AsrModels.load(
                     from: bundledDirectory,
-                    version: loadingVersion.asrModelVersion
+                    version: loadingVersion.asrModelVersion,
+                    progressHandler: progressRelay.handler
                 )
             } else {
                 applyHuggingFaceTokenToEnvironment()
                 try await ensureVocabularyAsset(for: loadingVersion)
-                models = try await AsrModels.downloadAndLoad(version: loadingVersion.asrModelVersion)
+                models = try await AsrModels.downloadAndLoad(
+                    version: loadingVersion.asrModelVersion,
+                    progressHandler: progressRelay.handler
+                )
             }
             guard !Task.isCancelled,
                   modelLoadGeneration == generation,
                   selectedVersion == loadingVersion else { return }
-            downloadProgress = 0.7
+            modelActivity = .loading(modelID: modelID)
+            downloadProgress = ProgressShare.loaded
 
             let manager = AsrManager(config: .default)
             try await manager.loadModels(models)
@@ -994,12 +1134,13 @@ final class ParakeetEngineImplementation: TranscriptionEngine {
             guard !Task.isCancelled,
                   modelLoadGeneration == generation,
                   selectedVersion == loadingVersion else { return }
-            downloadProgress = 1.0
+            downloadProgress = ProgressShare.ready
 
             asrManager = manager
             loadedAsrModels = models
             loadedModelId = loadingVersion.modelDef.id
             _selectedModelId = loadingVersion.modelDef.id
+            modelActivity = nil
             modelState = .ready
 
             store.setUserDefault(loadingVersion.modelDef.id, forKey: "selectedModel")
@@ -1016,8 +1157,22 @@ final class ParakeetEngineImplementation: TranscriptionEngine {
         } catch where Task.isCancelled || modelLoadGeneration != generation {
             return
         } catch {
+            modelActivity = nil
             modelState = .error(error.localizedDescription)
             downloadProgress = 0
+        }
+    }
+
+    private func applyPreparationUpdate(_ update: ParakeetModelProgressRelay.Update, modelID: String) {
+        // Once loading started, late transfer callbacks change nothing.
+        guard case .downloading = modelActivity else { return }
+        switch update {
+        case let .downloading(fraction):
+            modelActivity = .downloading(modelID: modelID, fractionCompleted: fraction)
+            downloadProgress = ProgressShare.started + (ProgressShare.downloaded - ProgressShare.started) * fraction
+        case .loading:
+            modelActivity = .loading(modelID: modelID)
+            downloadProgress = max(downloadProgress, ProgressShare.downloaded)
         }
     }
 
@@ -1162,6 +1317,7 @@ final class ParakeetEngineImplementation: TranscriptionEngine {
         asrManager = nil
         loadedAsrModels = nil
         loadedModelId = nil
+        modelActivity = nil
         modelState = .notLoaded
         downloadProgress = 0
         if clearPersistence {
@@ -1296,6 +1452,8 @@ final class ParakeetEngineImplementation: TranscriptionEngine {
         HuggingFaceTokenHelper.applyTokenToEnvironment(_hfToken)
     }
 }
+
+extension ParakeetEngineImplementation: ParakeetModelActivityReporting {}
 
 extension ParakeetEngineImplementation {
     var capabilities: TranscriptionCapabilities {
@@ -1459,6 +1617,18 @@ enum ParakeetVersion: String, CaseIterable {
 
     static func from(modelId: String) -> ParakeetVersion? {
         allCases.first { $0.modelDef.id == modelId }
+    }
+
+    /// v3 as soon as a preferred language is one v3 adds to English. English
+    /// alone, or only languages neither model covers, keep v2.
+    static func preferredDefault(forPreferredLanguages languages: [String]) -> ParakeetVersion {
+        let addedLanguages = Set(ParakeetVersion.v3.supportedLanguages)
+            .subtracting(ParakeetVersion.v2.supportedLanguages)
+        let wantsMultilingual = languages.contains { identifier in
+            let code = Locale(identifier: identifier).language.languageCode?.identifier ?? identifier
+            return addedLanguages.contains(code.lowercased())
+        }
+        return wantsMultilingual ? .v3 : .v2
     }
 }
 
