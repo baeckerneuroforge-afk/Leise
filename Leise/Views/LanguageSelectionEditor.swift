@@ -1,6 +1,102 @@
 import SwiftUI
 import LeiseCore
 
+/// A one-line language menu: automatic detection, one language, or — for
+/// per-task overrides — "Wie beim Diktat".
+///
+/// Several ordered languages (`.hints`) are not offered: the built-in engine
+/// only uses the first one. A stored list still shows up as its own choice so
+/// nothing is silently changed.
+struct SpokenLanguagePicker<Label: View>: View {
+    @Binding var selection: LanguageSelection
+    let languages: [(code: String, name: String)]
+    /// When set, adds `.inheritGlobal` as the first choice with this title.
+    var inheritTitle: String?
+    @ViewBuilder var label: () -> Label
+
+    private enum Choice: Hashable {
+        case inherit
+        case auto
+        case language(String)
+        case list([String])
+    }
+
+    private var choice: Binding<Choice> {
+        Binding(
+            get: {
+                switch selection {
+                case .inheritGlobal: inheritTitle == nil ? .auto : .inherit
+                case .auto: .auto
+                case .exact(let code): .language(code)
+                case .hints(let codes): .list(codes)
+                }
+            },
+            set: { newChoice in
+                switch newChoice {
+                case .inherit: selection = .inheritGlobal
+                case .auto: selection = .auto
+                case .language(let code): selection = .exact(code)
+                case .list(let codes): selection = .hints(codes)
+                }
+            }
+        )
+    }
+
+    /// The engine's languages, plus a stored language it does not list, so the
+    /// menu always contains the current value.
+    private var allLanguages: [(code: String, name: String)] {
+        var result = languages
+        if case .exact(let code) = selection, !languages.contains(where: { $0.code == code }) {
+            result.append((code: code, name: localizedAppLanguageName(for: code)))
+        }
+        return result
+    }
+
+    private var featuredLanguages: [(code: String, name: String)] {
+        allLanguages
+            .compactMap { language in featuredAppLanguageRank(for: language.code).map { (rank: $0, language: language) } }
+            .sorted { $0.rank < $1.rank }
+            .map(\.language)
+    }
+
+    private var otherLanguages: [(code: String, name: String)] {
+        let featured = Set(featuredLanguages.map(\.code))
+        return allLanguages
+            .filter { !featured.contains($0.code) }
+            .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+    }
+
+    var body: some View {
+        Picker(selection: choice) {
+            if let inheritTitle {
+                Text(inheritTitle).tag(Choice.inherit)
+            }
+            Text(localizedAppLanguageName(for: "auto")).tag(Choice.auto)
+
+            if !featuredLanguages.isEmpty {
+                Divider()
+                ForEach(featuredLanguages, id: \.code) { language in
+                    Text(language.name).tag(Choice.language(language.code))
+                }
+            }
+            if !otherLanguages.isEmpty {
+                Divider()
+                ForEach(otherLanguages, id: \.code) { language in
+                    Text(language.name).tag(Choice.language(language.code))
+                }
+            }
+            if case .hints(let codes) = selection {
+                Divider()
+                Text(codes.map(localizedAppLanguageName(for:)).formatted(.list(type: .and)))
+                    .tag(Choice.list(codes))
+            }
+        } label: {
+            label()
+        }
+        .pickerStyle(.menu)
+    }
+}
+
 enum LanguageSelectionHintBehavior: Equatable {
     case unknown
     case acceptsHints

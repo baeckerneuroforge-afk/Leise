@@ -151,6 +151,23 @@ class DictionaryViewModel: ObservableObject {
         filteredEntries.map(row)
     }
 
+    /// The Wörterbuch page shows corrections and terms in separate sections.
+    func rows(of type: DictionaryEntryType) -> [DictionaryEntryRow] {
+        entries.filter { $0.type == type }.map(row)
+    }
+
+    /// True while the editor shows an existing entry, which it can delete.
+    var canDeleteEditingEntry: Bool {
+        !isCreatingNew && selectedEntry != nil
+    }
+
+    func deleteEditingEntry() {
+        if let selectedEntry {
+            deleteEntry(selectedEntry)
+        }
+        cancelEditing()
+    }
+
     var termsCount: Int { dictionaryService.termsCount }
     var correctionsCount: Int { dictionaryService.correctionsCount }
     var enabledTermsCount: Int { dictionaryService.enabledTermsCount }

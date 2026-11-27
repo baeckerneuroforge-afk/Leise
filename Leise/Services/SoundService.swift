@@ -155,8 +155,24 @@ class SoundService {
 
     init(oneShotPlayer: OneShotSoundPlaying = AVAudioOneShotSoundPlayer()) {
         self.oneShotPlayer = oneShotPlayer
+        Self.storeFeedbackDefaultIfNeeded()
         preloadSounds()
         loadChoices()
+    }
+
+    /// "Töne abspielen" starts off ("kein Ton") for new installs. The service
+    /// container creates this service before `DictationViewModel` reads the
+    /// setting, so the stored value is what it sees.
+    ///
+    /// Installs from before this default played sounds without ever storing
+    /// the choice. Once setup was completed, that implicit "on" is stored
+    /// instead, so those users keep hearing what they heard. A stored choice is
+    /// never changed.
+    nonisolated static func storeFeedbackDefaultIfNeeded(in defaults: UserDefaults = .standard) {
+        let key = UserDefaultsKeys.soundFeedbackEnabled
+        guard defaults.object(forKey: key) == nil else { return }
+        let isInstallFromBeforeSilentDefault = defaults.bool(forKey: UserDefaultsKeys.setupWizardCompleted)
+        defaults.set(isInstallFromBeforeSilentDefault, forKey: key)
     }
 
     @discardableResult

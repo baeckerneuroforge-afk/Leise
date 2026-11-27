@@ -891,11 +891,11 @@ final class MenuBarGroupingTests: XCTestCase {
     func testSettingsPreferencePagesUseExpectedOrder() {
         XCTAssertEqual(
             SettingsSidebarLayout.preferenceTabs,
-            [.general, .parakeet, .hotkeys, .profiles, .appearance, .advanced, .errorLog]
+            [.dictation, .apps, .audio, .appearance, .advanced]
         )
         XCTAssertEqual(
             SettingsSidebarLayout.sections.map(\.id),
-            ["library", "recording", "preferences", "about"]
+            ["work", "preferences"]
         )
     }
 

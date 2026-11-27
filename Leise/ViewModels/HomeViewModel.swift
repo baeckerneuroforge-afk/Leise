@@ -114,6 +114,30 @@ struct CorrectionUsageItem: Identifiable {
     let count: Int
 }
 
+/// One day of the overview's week chart.
+struct WeekOverviewDay: Identifiable, Equatable {
+    let date: Date
+    let words: Int
+    let dictations: Int
+    let isToday: Bool
+    /// Later this week: drawn as an empty stub, left out of VoiceOver.
+    let isFuture: Bool
+
+    var id: Date { date }
+}
+
+/// The current calendar week (the locale decides whether it starts on
+/// Monday), as the overview sentence and chart show it.
+struct WeekOverview: Equatable {
+    let days: [WeekOverviewDay]
+    let words: Int
+    let dictations: Int
+    /// Minutes saved against typing at 45 words per minute; never negative.
+    let savedMinutes: Double
+
+    static let empty = WeekOverview(days: [], words: 0, dictations: 0, savedMinutes: 0)
+}
+
 @MainActor
 final class HomeViewModel: ObservableObject {
     @Published var selectedTimePeriod: TimePeriod = .week
@@ -132,6 +156,7 @@ final class HomeViewModel: ObservableObject {
     @Published var appsTrend: Double?
     @Published var timeSavedTrend: Double?
     @Published var recentTranscriptions: [TranscriptionRecord] = []
+    @Published private(set) var week: WeekOverview = .empty
     @Published var navigateToHistory = false
     @Published var pendingHistoryAppBundleIdentifier: String?
     @Published var pendingHistoryTimeRange: HistoryTimeRange = .all
@@ -244,6 +269,7 @@ final class HomeViewModel: ObservableObject {
         chartGranularity = granularity(for: snapshots, now: now)
         chartData = buildChartData(snapshots: snapshots, granularity: chartGranularity)
         recentTranscriptions = Array(allRecords.prefix(3))
+        week = buildWeekOverview(now: now)
 
         appUsage = rankedUsage(summary.appUsage)
         domainUsage = rankedUsage(summary.domainUsage)
@@ -409,6 +435,39 @@ final class HomeViewModel: ObservableObject {
             )
         }
         return grouped.values.sorted { $0.date < $1.date }
+    }
+
+    private func buildWeekOverview(now: Date) -> WeekOverview {
+        let calendar = Calendar.current
+        guard let interval = calendar.dateInterval(of: .weekOfYear, for: now) else { return .empty }
+        let start = calendar.startOfDay(for: interval.start)
+        let today = calendar.startOfDay(for: now)
+        let snapshotsByDay = Dictionary(
+            usageStatisticsService
+                .snapshots(startDay: start, endDayExclusive: interval.end)
+                .map { (calendar.startOfDay(for: $0.day), $0) },
+            uniquingKeysWith: { first, _ in first }
+        )
+
+        let days = (0..<7).compactMap { offset -> WeekOverviewDay? in
+            guard let day = calendar.date(byAdding: .day, value: offset, to: start) else { return nil }
+            let snapshot = snapshotsByDay[day]
+            return WeekOverviewDay(
+                date: day,
+                words: snapshot?.totalWords ?? 0,
+                dictations: snapshot?.transcriptionCount ?? 0,
+                isToday: day == today,
+                isFuture: day > today
+            )
+        }
+
+        let summary = usageStatisticsService.summary(startDay: start, endDayExclusive: interval.end)
+        return WeekOverview(
+            days: days,
+            words: summary.words,
+            dictations: summary.transcriptionCount,
+            savedMinutes: max(0, summary.rawSavedMinutes)
+        )
     }
 
     private func rankedUsage(_ values: [String: UsageCategoryAggregate]) -> [RankedUsageItem] {

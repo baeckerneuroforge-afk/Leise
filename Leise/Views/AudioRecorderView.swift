@@ -1,337 +1,173 @@
 import AppKit
 import SwiftUI
-import LeiseCore
 
+/// Transkribieren › Aufnahme: a large clock, the record button and the level,
+/// then where the recording goes and whether it gets a transcript.
 struct AudioRecorderView: View {
     @ObservedObject var viewModel: AudioRecorderViewModel
+    /// Called after a recording was handed to file transcription.
+    var showFiles: () -> Void = {}
+
+    @ObservedObject private var settings = ServiceContainer.shared.settingsViewModel
+    @ObservedObject private var audioDevice = ServiceContainer.shared.audioDeviceService
     @ObservedObject private var modelManager = ServiceContainer.shared.modelManagerService
+    @ObservedObject private var dictation = ServiceContainer.shared.dictationViewModel
 
     private var isEditingLocked: Bool {
         viewModel.state != .idle
     }
 
-    private func transcriptionAuthNotice(for engines: [any TranscriptionEngine]) -> String? {
-        engines
-            .map { modelManager.transcriptionAuthStatus(for: $0) }
-            .first { !$0.isAvailable }?
-            .unavailableReason
-    }
-
-    @ViewBuilder
-    private func enginePickerLabel(for engine: any TranscriptionEngine) -> some View {
-        let authStatus = modelManager.transcriptionAuthStatus(for: engine)
-        HStack {
-            Text(engine.displayName)
-            if !authStatus.isAvailable {
-                Text("(\(String(localized: "unavailable")))")
-                    .foregroundStyle(.secondary)
-            } else if !engine.isReady {
-                Text("(\(String(localized: "not ready")))")
-                    .foregroundStyle(.secondary)
-            }
-        }
-    }
-
     var body: some View {
-        Form {
-            // Recording Controls
+        SettingsPage(.transcribe) {
             Section {
-                VStack(spacing: 16) {
-                    // Duration display
-                    Text(viewModel.formattedDuration(viewModel.duration))
-                        .font(.system(size: 48, weight: .light, design: .monospaced))
-                        .foregroundStyle(viewModel.state == .recording ? .primary : .secondary)
-                        .frame(maxWidth: .infinity)
+                micToggle
 
-                    // Record/Stop button
-                    Button {
-                        viewModel.toggleRecording()
-                    } label: {
-                        HStack(spacing: 8) {
-                            Image(systemName: viewModel.state == .recording ? "stop.fill" : "record.circle")
-                                .font(.title2)
-                            Text(viewModel.state == .recording
-                                ? String(localized: "recorder.stopRecording")
-                                : String(localized: "recorder.startRecording"))
-                        }
-                        .frame(minWidth: 200)
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .tint(viewModel.state == .recording ? .red : .accentColor)
-                    .controlSize(.large)
-                    .disabled(!viewModel.canToggleRecording)
-
-                    // Level meters
-                    if viewModel.state == .recording {
-                        VStack(spacing: 8) {
-                            if viewModel.micEnabled {
-                                LevelMeterRow(
-                                    label: String(localized: "recorder.mic"),
-                                    icon: "mic.fill",
-                                    level: viewModel.micLevel
-                                )
-                            }
-                            if viewModel.systemAudioEnabled {
-                                LevelMeterRow(
-                                    label: String(localized: "recorder.systemAudio"),
-                                    icon: "speaker.wave.2.fill",
-                                    level: viewModel.systemLevel
-                                )
-                            }
-                        }
-                        .padding(.top, 4)
-                    }
-                }
-                .padding(.vertical, 8)
-
-                if let error = viewModel.errorMessage {
-                    Label(error, systemImage: "exclamationmark.triangle")
-                        .foregroundStyle(.red)
-                        .font(.callout)
-                }
-
-                if let warning = viewModel.systemAudioWarningMessage {
-                    Label(warning, systemImage: "speaker.slash")
-                        .foregroundStyle(.orange)
-                        .font(.callout)
-                }
-            }
-
-            // Transcribing indicator after stop
-            if viewModel.state == .finalizing {
-                Section {
-                    HStack(spacing: 8) {
-                        ProgressView()
-                            .controlSize(.small)
-                        Text(String(localized: "recorder.transcribing"))
-                            .foregroundStyle(.secondary)
-                    }
-                }
-            }
-
-            // Audio Sources
-            Section(String(localized: "recorder.sources")) {
-                Toggle(String(localized: "recorder.mic"), isOn: $viewModel.micEnabled)
-                    .disabled(isEditingLocked)
-
-                Toggle(String(localized: "recorder.systemAudio"), isOn: $viewModel.systemAudioEnabled)
-                    .disabled(isEditingLocked)
-
-                if viewModel.systemAudioEnabled {
-                    Label(
-                        String(localized: "recorder.systemAudioPermission"),
-                        systemImage: "info.circle"
+                Toggle(isOn: $viewModel.systemAudioEnabled) {
+                    SettingsRowLabel(
+                        title: SettingsRow.systemAudio.title,
+                        subtitle: String(localized: "For calls: also records the other participants."),
+                        info: String(localized: "recorder.systemAudioPermission")
                     )
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
                 }
-
-                LabeledContent(String(localized: "recorder.outputFolder")) {
-                    HStack(spacing: 8) {
-                        Text(viewModel.outputDirectoryDisplayPath)
-                            .foregroundStyle(.secondary)
-                            .lineLimit(1)
-                            .truncationMode(.middle)
-                            .frame(maxWidth: 320, alignment: .trailing)
-                            .help(viewModel.outputDirectory.path)
-
-                        Button {
-                            chooseOutputFolder()
-                        } label: {
-                            Label(String(localized: "Choose Folder"), systemImage: "folder")
-                        }
-
-                        if viewModel.selectedOutputDirectory != nil {
-                            Button {
-                                viewModel.useDefaultOutputDirectory()
-                            } label: {
-                                Image(systemName: "arrow.counterclockwise")
-                            }
-                            .help(String(localized: "recorder.useDefaultOutputFolder"))
-                            .accessibilityLabel(String(localized: "recorder.useDefaultOutputFolder"))
-                        }
-                    }
-                }
-                .disabled(isEditingLocked)
-
-                Text(String(localized: "recorder.outputFolder.description"))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-
-                Picker(String(localized: "recorder.format"), selection: $viewModel.outputFormat) {
-                    Text("WAV").tag(AudioRecorderService.OutputFormat.wav)
-                    Text("M4A").tag(AudioRecorderService.OutputFormat.m4a)
-                }
+                .settingsRow(.systemAudio)
                 .disabled(isEditingLocked)
 
                 if viewModel.micEnabled && viewModel.systemAudioEnabled {
-                    Picker(String(localized: "recorder.trackMode"), selection: $viewModel.trackMode) {
+                    Picker(String(localized: "Tracks"), selection: $viewModel.trackMode) {
                         ForEach(AudioRecorderService.TrackMode.allCases, id: \.self) { mode in
                             Text(mode.displayName).tag(mode)
                         }
                     }
                     .disabled(isEditingLocked)
-                }
 
-                Picker(String(localized: "Echo Handling"), selection: $viewModel.micDuckingMode) {
-                    ForEach(AudioRecorderService.MicDuckingMode.allCases, id: \.self) { mode in
-                        Text(mode.displayName).tag(mode)
+                    Picker(selection: $viewModel.micDuckingMode) {
+                        ForEach(AudioRecorderService.MicDuckingMode.allCases, id: \.self) { mode in
+                            Text(mode.displayName).tag(mode)
+                        }
+                    } label: {
+                        SettingsRowLabel(
+                            title: String(localized: "Echo Handling"),
+                            info: String(localized: "Affects only Leise recordings and transcriptions, not your live meeting microphone.")
+                        )
                     }
+                    .disabled(isEditingLocked || viewModel.trackMode == .separate)
                 }
-                .disabled(
-                    isEditingLocked
-                    || !viewModel.micEnabled
-                    || !viewModel.systemAudioEnabled
-                    || viewModel.trackMode == .separate
-                )
 
-                Text(String(localized: "Affects only Leise recordings and transcriptions, not your live meeting microphone."))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                saveLocationRow
+
+                Picker(String(localized: "Format"), selection: $viewModel.outputFormat) {
+                    Text(verbatim: "M4A (AAC)").tag(AudioRecorderService.OutputFormat.m4a)
+                    Text(verbatim: "WAV").tag(AudioRecorderService.OutputFormat.wav)
+                }
+                .disabled(isEditingLocked)
+            } header: {
+                VStack(spacing: LeiseSpacing.xxl) {
+                    RecorderHero(viewModel: viewModel)
+                    Text(String(localized: "Source"))
+                        .font(.headline)
+                        .foregroundStyle(.primary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .textCase(nil)
             }
 
-            // Transcription Settings
-            Section(String(localized: "recorder.transcription")) {
-                Toggle(String(localized: "recorder.createTranscriptAfterRecording"), isOn: $viewModel.transcriptionEnabled)
+            Section {
+                Toggle(String(localized: "Create transcript"), isOn: $viewModel.transcriptionEnabled)
                     .disabled(isEditingLocked)
 
-                Text(String(localized: "recorder.createTranscriptAfterRecording.description"))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-
-                VStack(alignment: .leading, spacing: 4) {
-                    recorderSummaryRow(
-                        title: String(localized: "recorder.effectiveEngine"),
-                        value: viewModel.activeEngineName ?? String(localized: "recorder.noEngineSelected")
-                    )
-                    recorderSummaryRow(
-                        title: String(localized: "recorder.effectiveModel"),
-                        value: viewModel.activeModelName ?? String(localized: "Default")
-                    )
-                }
-                .font(.caption)
-                .foregroundStyle(.secondary)
-
-                let engines = modelManager.availableEngines
-                Picker(String(localized: "Engine"), selection: $viewModel.selectedEngine) {
-                    Text(String(localized: "recorder.useDictationDefaultEngine")).tag(nil as String?)
-                    Divider()
-                    ForEach(engines, id: \.id) { engine in
-                        enginePickerLabel(for: engine)
-                            .tag(engine.id as String?)
-                            .disabled(!viewModel.canUseForTranscription(engine))
-                    }
-                }
-                .disabled(isEditingLocked || !viewModel.transcriptionEnabled)
-
-                if let notice = transcriptionAuthNotice(for: engines) {
-                    Label(notice, systemImage: "key")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-
-                if let engine = viewModel.resolvedEngine,
-                   viewModel.canUseForTranscription(engine) {
-                    let models = engine.models
-                    if models.count > 1 {
-                        Picker(String(localized: "Model"), selection: $viewModel.selectedModel) {
-                            Text(String(localized: "Default")).tag(nil as String?)
-                            Divider()
-                            ForEach(models, id: \.id) { model in
-                                Text(model.displayName).tag(model.id as String?)
-                            }
-                        }
-                        .disabled(isEditingLocked || !viewModel.transcriptionEnabled)
-                    }
-                }
-
-                let languageOptions: [(code: String, name: String)] = {
-                    let supportedLanguages = viewModel.selectedEngineSupportedLanguages
-                    guard !supportedLanguages.isEmpty else {
-                        return ServiceContainer.shared.settingsViewModel.availableLanguages
-                    }
-                    return localizedAppLanguageOptions(for: supportedLanguages)
-                        .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
-                        .map { (code: $0.code, name: $0.name) }
-                }()
-
-                LanguageSelectionEditor(
+                SpokenLanguagePicker(
                     selection: $viewModel.languageSelection,
-                    availableLanguages: languageOptions,
-                    hintBehavior: LanguageSelectionHintBehavior(engine: viewModel.resolvedEngine)
-                )
+                    languages: settings.availableLanguages,
+                    inheritTitle: String(localized: "Same as Dictation")
+                ) {
+                    Text(String(localized: "Language"))
+                }
                 .disabled(isEditingLocked || !viewModel.transcriptionEnabled)
 
-                if !viewModel.transcriptionEnabled {
-                    Label(String(localized: "recorder.transcriptionSettingsDisabledHint"), systemImage: "info.circle")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                Toggle(isOn: $viewModel.livePreviewEnabled) {
+                    SettingsRowLabel(
+                        title: String(localized: "Live transcript while recording"),
+                        info: String(localized: "Shows the recognized words while you record. Uses a lighter, faster pass; the saved transcript is made at the end.")
+                    )
                 }
-
-                Toggle(String(localized: "recorder.showLiveTranscriptWhileRecording"), isOn: $viewModel.livePreviewEnabled)
-                    .disabled(isEditingLocked || !viewModel.transcriptionEnabled)
-
-                if viewModel.livePreviewEnabled {
-                    if viewModel.resolvedEngine != nil {
-                        Label(
-                            String(localized: "recorder.livePreviewLightweightHint"),
-                            systemImage: "info.circle"
-                        )
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    }
-
-                }
-            }
-            .onAppear {
-                modelManager.restoreProviderSelection()
-                viewModel.reconcileSelectionWithAvailableEngines()
-                viewModel.loadRecordings()
+                .disabled(isEditingLocked || !viewModel.transcriptionEnabled)
+            } header: {
+                Text(String(localized: "Transcript"))
             }
 
-            // Recordings list
             Section {
                 if viewModel.recordings.isEmpty {
-                    Text(String(localized: "recorder.noRecordings"))
+                    Text(emptyRecordingsText)
                         .foregroundStyle(.secondary)
-                        .frame(maxWidth: .infinity, alignment: .center)
-                        .padding(.vertical, 20)
+                        .fixedSize(horizontal: false, vertical: true)
                 } else {
                     ForEach(viewModel.recordings) { item in
-                        RecordingRow(item: item, viewModel: viewModel)
+                        RecordingRow(item: item, viewModel: viewModel, showFiles: showFiles)
                     }
                 }
             } header: {
-                HStack {
-                    Text(String(localized: "recorder.recordings"))
-                    Spacer()
-                    if !viewModel.recordings.isEmpty {
-                        Button {
-                            viewModel.openRecordingsFolder()
-                        } label: {
-                            Label(String(localized: "recorder.revealInFinder"), systemImage: "folder")
-                                .font(.caption)
-                        }
-                        .buttonStyle(.plain)
-                        .foregroundStyle(.secondary)
+                Text(String(localized: "Recordings"))
+            } footer: {
+                if !viewModel.recordings.isEmpty {
+                    Button(String(localized: "Open Recordings Folder")) {
+                        viewModel.openRecordingsFolder()
                     }
+                    .buttonStyle(.link)
                 }
             }
         }
-        .formStyle(.grouped)
-        .padding()
-        .frame(minWidth: 500, minHeight: 400)
+        .onAppear {
+            modelManager.restoreProviderSelection()
+            viewModel.reconcileSelectionWithAvailableEngines()
+            viewModel.loadRecordings()
+        }
     }
 
-    private func recorderSummaryRow(title: String, value: String) -> some View {
-        HStack(spacing: 8) {
-            Text(title)
-                .frame(width: 96, alignment: .leading)
-            Text(value)
-                .foregroundStyle(.primary)
-                .lineLimit(1)
-                .truncationMode(.middle)
+    private var micToggle: some View {
+        Toggle(isOn: $viewModel.micEnabled) {
+            SettingsRowLabel(
+                title: String(localized: "Microphone"),
+                subtitle: audioDevice.selectedDevice.map { audioDevice.displayName(for: $0) }
+                    ?? String(localized: "System Default")
+            )
         }
+        .disabled(isEditingLocked)
+    }
+
+    private var emptyRecordingsText: String {
+        _ = dictation.hotkeyLabelsVersion
+        let shortcut = dictation.hotkeys(for: .recorderToggle).first.map(HotkeyService.displayName(for:))
+        if let shortcut {
+            return String(localized: "No recordings yet. The red button above starts one, or press \(shortcut) in any app.")
+        }
+        return String(localized: "No recordings yet. The red button above starts one.")
+    }
+
+    private var saveLocationRow: some View {
+        LabeledContent {
+            HStack(spacing: LeiseSpacing.s) {
+                Text(viewModel.outputDirectoryDisplayPath)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                    .help(viewModel.outputDirectory.path)
+                Button(String(localized: "Change…"), action: chooseOutputFolder)
+                if viewModel.selectedOutputDirectory != nil {
+                    Button {
+                        viewModel.useDefaultOutputDirectory()
+                    } label: {
+                        Image(systemName: "arrow.counterclockwise")
+                    }
+                    .buttonStyle(.borderless)
+                    .help(String(localized: "recorder.useDefaultOutputFolder"))
+                    .accessibilityLabel(String(localized: "recorder.useDefaultOutputFolder"))
+                }
+            }
+        } label: {
+            Text(SettingsRow.recordingsFolder.title)
+        }
+        .settingsRow(.recordingsFolder)
+        .disabled(isEditingLocked)
     }
 
     private func chooseOutputFolder() {
@@ -344,11 +180,9 @@ struct AudioRecorderView: View {
         panel.message = String(localized: "recorder.outputFolder.pickerMessage")
 
         let currentDirectory = viewModel.outputDirectory
-        if FileManager.default.fileExists(atPath: currentDirectory.path) {
-            panel.directoryURL = currentDirectory
-        } else {
-            panel.directoryURL = currentDirectory.deletingLastPathComponent()
-        }
+        panel.directoryURL = FileManager.default.fileExists(atPath: currentDirectory.path)
+            ? currentDirectory
+            : currentDirectory.deletingLastPathComponent()
 
         panel.begin { response in
             guard response == .OK, let directory = panel.url else { return }
@@ -359,153 +193,217 @@ struct AudioRecorderView: View {
     }
 }
 
-// MARK: - Level Meter Row
+// MARK: - Hero
 
-private struct LevelMeterRow: View {
-    let label: String
-    let icon: String
-    let level: Float
+private struct RecorderHero: View {
+    @ObservedObject var viewModel: AudioRecorderViewModel
+
+    @ScaledMetric(relativeTo: .largeTitle) private var clockSize: CGFloat = 52
+
+    private var isRecording: Bool { viewModel.state == .recording }
 
     var body: some View {
-        HStack(spacing: 8) {
-            Image(systemName: icon)
-                .foregroundStyle(.secondary)
-                .font(.caption)
-                .frame(width: 16)
+        VStack(spacing: LeiseSpacing.l) {
+            Text(Self.clock(viewModel.duration))
+                .font(.system(size: clockSize, weight: .semibold, design: .rounded))
+                .monospacedDigit()
+                .contentTransition(.numericText())
+                .foregroundStyle(isRecording ? .primary : .secondary)
+                .accessibilityLabel(String(localized: "Recording time"))
+                .accessibilityValue(Self.clock(viewModel.duration))
 
-            Text(label)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .frame(width: 80, alignment: .leading)
-
-            GeometryReader { geo in
-                let maxRms: Float = 0.8
-                let levelWidth = max(0, geo.size.width * CGFloat(min(level, maxRms) / maxRms))
-
-                ZStack(alignment: .leading) {
-                    RoundedRectangle(cornerRadius: 3)
-                        .fill(.quaternary)
-
-                    RoundedRectangle(cornerRadius: 3)
-                        .fill(levelColor(level).gradient)
-                        .frame(width: levelWidth)
-                        .animation(.easeOut(duration: 0.08), value: level)
-                }
+            RecordButton(isRecording: isRecording) {
+                viewModel.toggleRecording()
+                AccessibilityNotification.Announcement(isRecording
+                    ? String(localized: "Recording stopped")
+                    : String(localized: "Recording started")).post()
             }
-            .frame(height: 6)
+            .disabled(!viewModel.canToggleRecording)
+
+            LevelMeter(
+                level: max(viewModel.micLevel, viewModel.systemLevel),
+                isActive: isRecording,
+                tint: LeiseColor.record,
+                barCount: 24
+            )
+
+            status
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.top, LeiseSpacing.s)
+    }
+
+    @ViewBuilder
+    private var status: some View {
+        if viewModel.state == .finalizing {
+            StatusLabel(kind: .working, text: String(localized: "Transcribing…"))
+        } else if let error = viewModel.errorMessage {
+            StatusLabel(kind: .error, text: error)
+        } else if !viewModel.micEnabled && !viewModel.systemAudioEnabled {
+            Text(String(localized: "Turn on the microphone or system audio to record."))
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+        }
+        if let warning = viewModel.systemAudioWarningMessage {
+            Label(warning, systemImage: "speaker.slash")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
         }
     }
 
-    private func levelColor(_ level: Float) -> Color {
-        if level > 0.7 {
-            return .red
-        } else if level > 0.4 {
-            return .yellow
+    /// "00:00", or "1:02:10" past an hour.
+    static func clock(_ duration: TimeInterval) -> String {
+        let total = max(Int(duration), 0)
+        let hours = total / 3600
+        let minutes = (total % 3600) / 60
+        let seconds = total % 60
+        if hours > 0 {
+            return String(format: "%d:%02d:%02d", hours, minutes, seconds)
         }
-        return .green
+        return String(format: "%02d:%02d", minutes, seconds)
     }
 }
 
-// MARK: - Recording Row
+/// The record button: a red circle that becomes a rounded square while
+/// recording.
+private struct RecordButton: View {
+    let isRecording: Bool
+    let action: () -> Void
+
+    private static let restingSize: CGFloat = 22
+    private static let recordingSize: CGFloat = 18
+
+    var body: some View {
+        Button(action: action) {
+            RoundedRectangle(
+                cornerRadius: isRecording ? LeiseRadius.control : Self.restingSize / 2,
+                style: .continuous
+            )
+            .fill(LeiseColor.record)
+            .frame(
+                width: isRecording ? Self.recordingSize : Self.restingSize,
+                height: isRecording ? Self.recordingSize : Self.restingSize
+            )
+        }
+        .buttonStyle(RecordButtonStyle())
+        .leiseAnimation(LeiseMotion.ui, value: isRecording)
+        .accessibilityLabel(isRecording ? String(localized: "Stop Recording") : String(localized: "Start Recording"))
+        .help(isRecording ? String(localized: "Stop Recording") : String(localized: "Start Recording"))
+    }
+}
+
+private struct RecordButtonStyle: ButtonStyle {
+    private static let diameter: CGFloat = 56
+
+    @Environment(\.isEnabled) private var isEnabled
+    @Environment(\.colorSchemeContrast) private var contrast
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .frame(width: Self.diameter, height: Self.diameter)
+            .background(Circle().fill(Color(nsColor: .controlBackgroundColor)))
+            .overlay(
+                Circle().strokeBorder(Color.primary.opacity(contrast == .increased ? 0.35 : 0.12), lineWidth: 1)
+            )
+            .contentShape(Circle())
+            .scaleEffect(configuration.isPressed && !reduceMotion ? 0.95 : 1)
+            .opacity(isEnabled ? 1 : 0.45)
+            .animation(LeiseMotion.adaptive(LeiseMotion.micro, reduceMotion: reduceMotion), value: configuration.isPressed)
+    }
+}
+
+// MARK: - Recordings
 
 private struct RecordingRow: View {
     let item: AudioRecorderViewModel.RecordingItem
     @ObservedObject var viewModel: AudioRecorderViewModel
-    @State private var showTranscript = false
+    let showFiles: () -> Void
+
+    @State private var showsTranscript = false
+
+    private var subtitle: String {
+        [
+            item.date.formatted(date: .abbreviated, time: .shortened),
+            viewModel.formattedDuration(item.duration),
+            viewModel.formattedFileSize(item.fileSize),
+        ].joined(separator: " · ")
+    }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            HStack {
+        VStack(alignment: .leading, spacing: LeiseSpacing.s) {
+            HStack(spacing: LeiseSpacing.s) {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(item.fileName)
-                        .font(.body)
                         .lineLimit(1)
-
-                    HStack(spacing: 12) {
-                        Label(formattedDate(item.date), systemImage: "calendar")
-                        Label(viewModel.formattedDuration(item.duration), systemImage: "clock")
-                        Label(viewModel.formattedFileSize(item.fileSize), systemImage: "doc")
-                        if item.transcript != nil {
-                            Label(String(localized: "recorder.hasTranscript"), systemImage: "text.quote")
-                        }
-                        if item.transcriptionFailure != nil {
-                            Label(String(localized: "recorder.transcriptionFailed"), systemImage: "exclamationmark.triangle")
-                                .foregroundStyle(.red)
-                        }
-                    }
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                        .truncationMode(.middle)
+                    Text(subtitle)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .monospacedDigit()
                 }
+                Spacer(minLength: LeiseSpacing.s)
 
-                Spacer()
+                Button {
+                    NSWorkspace.shared.open(item.url)
+                } label: {
+                    Image(systemName: "play.fill")
+                }
+                .help(String(localized: "Play"))
+                .accessibilityLabel(String(localized: "Play"))
 
-                HStack(spacing: 4) {
-                    if item.transcript != nil {
-                        Button {
-                            showTranscript.toggle()
-                        } label: {
-                            Image(systemName: "text.quote")
-                                .foregroundStyle(showTranscript ? .accent : .secondary)
-                        }
-                        .buttonStyle(.borderless)
-                        .help(String(localized: "recorder.showTranscript"))
+                if item.transcript != nil {
+                    Button {
+                        withLeiseAnimation(LeiseMotion.shape) { showsTranscript.toggle() }
+                    } label: {
+                        Image(systemName: "text.quote")
+                            .foregroundStyle(showsTranscript ? LeiseColor.tint : .secondary)
                     }
-
+                    .help(String(localized: "recorder.showTranscript"))
+                    .accessibilityLabel(String(localized: "recorder.showTranscript"))
+                    .accessibilityValue(showsTranscript ? String(localized: "Expanded") : String(localized: "Collapsed"))
+                } else {
                     Button {
                         viewModel.transcribeRecording(item)
+                        showFiles()
                     } label: {
                         Image(systemName: "text.viewfinder")
                     }
-                    .buttonStyle(.borderless)
                     .help(String(localized: "recorder.transcribe"))
-
-                    Button {
-                        viewModel.revealInFinder(item)
-                    } label: {
-                        Image(systemName: "folder")
-                    }
-                    .buttonStyle(.borderless)
-                    .help(String(localized: "recorder.revealInFinder"))
-
-                    Button(role: .destructive) {
-                        viewModel.deleteRecording(item)
-                    } label: {
-                        Image(systemName: "trash")
-                    }
-                    .buttonStyle(.borderless)
-                    .help(String(localized: "recorder.delete"))
+                    .accessibilityLabel(String(localized: "recorder.transcribe"))
                 }
+
+                Button {
+                    viewModel.revealInFinder(item)
+                } label: {
+                    Image(systemName: "folder")
+                }
+                .help(String(localized: "Show in Finder"))
+                .accessibilityLabel(String(localized: "Show in Finder"))
             }
+            .buttonStyle(.borderless)
 
             if let failureSummary = viewModel.transcriptionFailureSummary(for: item) {
-                Label(failureSummary, systemImage: "exclamationmark.triangle.fill")
-                    .font(.caption)
-                    .foregroundStyle(.red)
+                StatusLabel(kind: .error, text: failureSummary)
                     .textSelection(.enabled)
                     .fixedSize(horizontal: false, vertical: true)
             }
 
-            // Expandable transcript
-            if showTranscript, let transcript = item.transcript {
-                VStack(alignment: .leading, spacing: 4) {
+            if showsTranscript, let transcript = item.transcript {
+                VStack(alignment: .leading, spacing: LeiseSpacing.xs) {
                     Text(transcript)
-                        .font(.callout)
                         .foregroundStyle(.secondary)
                         .textSelection(.enabled)
-
-                    Button {
+                        .fixedSize(horizontal: false, vertical: true)
+                    Button(String(localized: "recorder.copyTranscript")) {
                         viewModel.copyTranscript(transcript)
-                    } label: {
-                        Label(String(localized: "recorder.copyTranscript"), systemImage: "doc.on.doc")
-                            .font(.caption)
+                        AccessibilityNotification.Announcement(String(localized: "Copied")).post()
                     }
-                    .buttonStyle(.borderless)
+                    .buttonStyle(.link)
                 }
-                .padding(.top, 4)
-                .padding(.leading, 4)
+                .transition(.opacity)
             }
         }
-        .padding(.vertical, 4)
         .contextMenu {
             if let transcript = item.transcript {
                 Button(String(localized: "recorder.copyTranscript")) {
@@ -515,21 +413,15 @@ private struct RecordingRow: View {
             }
             Button(String(localized: "recorder.transcribe")) {
                 viewModel.transcribeRecording(item)
+                showFiles()
             }
-            Button(String(localized: "recorder.revealInFinder")) {
+            Button(String(localized: "Show in Finder")) {
                 viewModel.revealInFinder(item)
             }
             Divider()
             Button(String(localized: "recorder.delete"), role: .destructive) {
-                viewModel.deleteRecording(item)
+                withLeiseAnimation(LeiseMotion.ui) { viewModel.deleteRecording(item) }
             }
         }
-    }
-
-    private func formattedDate(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateStyle = .medium
-        formatter.timeStyle = .short
-        return formatter.string(from: date)
     }
 }

@@ -1,264 +1,274 @@
-import SwiftUI
 import AppKit
+import SwiftUI
 
-enum SettingsTab: Hashable, CaseIterable {
-    case home, general, appearance, hotkeys, recorder
-    case dictationRecovery, fileTranscription, history, dictionary, profiles, parakeet, advanced, errorLog, about
+// MARK: - Pages
+
+/// The nine pages of the main window.
+enum SettingsTab: String, Hashable, CaseIterable, Identifiable, Sendable {
+    case overview
+    case history
+    case dictionary
+    case transcribe
+    case dictation
+    case apps
+    case audio
+    case appearance
+    case advanced
+
+    var id: String { rawValue }
+
+    /// Pre-redesign name, still used by callers outside the window.
+    static let home: SettingsTab = .overview
+    /// Recovery lives in the history now.
+    static let dictationRecovery: SettingsTab = .history
+
+    var title: String {
+        switch self {
+        case .overview: String(localized: "Overview")
+        case .history: String(localized: "History")
+        case .dictionary: String(localized: "Dictionary")
+        case .transcribe: String(localized: "Transcribe")
+        case .dictation: String(localized: "Dictation")
+        case .apps: String(localized: "Apps")
+        case .audio: String(localized: "Audio")
+        case .appearance: String(localized: "Appearance")
+        case .advanced: String(localized: "Advanced")
+        }
+    }
+
+    var systemImage: String {
+        switch self {
+        case .overview: "house"
+        case .history: "clock.arrow.circlepath"
+        case .dictionary: "character.book.closed"
+        case .transcribe: "waveform"
+        case .dictation: "mic"
+        case .apps: "app.badge"
+        case .audio: "speaker.wave.2"
+        case .appearance: "paintbrush"
+        case .advanced: "slider.horizontal.3"
+        }
+    }
 }
 
 /// The single source of truth for sidebar structure: every tab must appear in
 /// exactly one section here, or it is unreachable from the UI (verified by
-/// `testEverySettingsTabAppearsInExactlyOneSidebarSection`).
+/// `SettingsStructureTests`).
 enum SettingsSidebarLayout {
-    static let libraryTabs: [SettingsTab] = [.home, .history, .dictationRecovery, .dictionary]
-    static let recordingTabs: [SettingsTab] = [.recorder, .fileTranscription]
-    static let preferenceTabs: [SettingsTab] = [
-        .general,
-        .parakeet,
-        .hotkeys,
-        .profiles,
-        .appearance,
-        .advanced,
-        .errorLog,
-    ]
-    static let aboutTabs: [SettingsTab] = [.about]
+    /// What you work with, without a header.
+    static let workTabs: [SettingsTab] = [.overview, .history, .dictionary, .transcribe]
+    /// The settings, under the header "Einstellungen".
+    static let preferenceTabs: [SettingsTab] = [.dictation, .apps, .audio, .appearance, .advanced]
 
     static let sections: [(id: String, tabs: [SettingsTab])] = [
-        ("library", libraryTabs),
-        ("recording", recordingTabs),
+        ("work", workTabs),
         ("preferences", preferenceTabs),
-        ("about", aboutTabs),
     ]
+
+    static func title(forSection id: String) -> String? {
+        id == "preferences" ? String(localized: "Settings") : nil
+    }
 }
 
-private struct SettingsDestination: Identifiable, Hashable {
-    let tab: SettingsTab
-    let title: String
-    let systemImage: String
-    let badge: Int?
+// MARK: - Window state
 
-    var id: SettingsTab { tab }
+@MainActor
+final class SettingsWindowState: ObservableObject {
+    @Published private(set) var selection: SettingsTab = .overview
+    @Published var dictionarySection: DictionaryPageSection = .corrections
+    @Published var transcribeMode: TranscribeMode = .recording
+    /// The row the visible page should scroll to and flash.
+    @Published private(set) var focusRequest: SettingsFocusRequest?
+    /// The search result the sidebar shows as selected.
+    @Published var searchSelection: SettingsRow?
+
+    /// A plain page change from the sidebar: nothing to flash.
+    func select(_ tab: SettingsTab) {
+        focusRequest = nil
+        if selection != tab {
+            selection = tab
+        }
+    }
+
+    /// Opens the page that owns `row`, in the right section, and flashes the row.
+    func reveal(_ row: SettingsRow) {
+        if let section = row.dictionarySection {
+            dictionarySection = section
+        }
+        if let mode = row.transcribeMode {
+            transcribeMode = mode
+        }
+        focusRequest = SettingsFocusRequest(row: row)
+        if selection != row.page {
+            selection = row.page
+        }
+    }
+
+    func open(_ tab: SettingsTab, row: SettingsRow?) {
+        if let row, row.page == tab {
+            reveal(row)
+        } else {
+            select(tab)
+        }
+    }
 }
 
-private struct SettingsDestinationSection: Identifiable {
-    let id: String
-    let destinations: [SettingsDestination]
-}
+// MARK: - Window
 
 struct SettingsView: View {
-    @State private var selectedTab: SettingsTab = .home
+    @StateObject private var state = SettingsWindowState()
+    @State private var searchText = ""
     @ObservedObject private var fileTranscription = ServiceContainer.shared.fileTranscriptionViewModel
     @ObservedObject private var dictationRecovery = ServiceContainer.shared.dictationRecoveryViewModel
     @ObservedObject private var homeViewModel = ServiceContainer.shared.homeViewModel
     @ObservedObject private var settingsNavigation = SettingsNavigationCoordinator.shared
-
-    /// Exhaustive by design: adding a tab without display metadata is a
-    /// compile error rather than a runtime crash.
-    private static func destination(for tab: SettingsTab) -> SettingsDestination {
-        switch tab {
-        case .home:
-            SettingsDestination(tab: .home, title: String(localized: "Dashboard"), systemImage: "house", badge: nil)
-        case .general:
-            SettingsDestination(tab: .general, title: String(localized: "General"), systemImage: "gear", badge: nil)
-        case .appearance:
-            SettingsDestination(tab: .appearance, title: String(localized: "Appearance"), systemImage: "paintbrush", badge: nil)
-        case .hotkeys:
-            SettingsDestination(tab: .hotkeys, title: String(localized: "Hotkeys"), systemImage: "keyboard", badge: nil)
-        case .recorder:
-            SettingsDestination(tab: .recorder, title: String(localized: "settings.tab.recorder"), systemImage: "waveform.circle", badge: nil)
-        case .dictationRecovery:
-            SettingsDestination(tab: .dictationRecovery, title: String(localized: "Recovery"), systemImage: "waveform", badge: nil)
-        case .fileTranscription:
-            SettingsDestination(tab: .fileTranscription, title: String(localized: "File Transcription"), systemImage: "doc.text", badge: nil)
-        case .history:
-            SettingsDestination(tab: .history, title: String(localized: "History"), systemImage: "clock.arrow.circlepath", badge: nil)
-        case .dictionary:
-            SettingsDestination(tab: .dictionary, title: String(localized: "Dictionary"), systemImage: "book.closed", badge: nil)
-        case .profiles:
-            SettingsDestination(tab: .profiles, title: String(localized: "Profiles"), systemImage: "person.crop.circle", badge: nil)
-        case .parakeet:
-            SettingsDestination(tab: .parakeet, title: String(localized: "Processing"), systemImage: "cpu", badge: nil)
-        case .advanced:
-            SettingsDestination(tab: .advanced, title: String(localized: "Advanced"), systemImage: "gearshape.2", badge: nil)
-        case .errorLog:
-            SettingsDestination(tab: .errorLog, title: String(localized: "Error Log"), systemImage: "exclamationmark.triangle", badge: nil)
-        case .about:
-            SettingsDestination(tab: .about, title: String(localized: "About"), systemImage: "info.circle", badge: nil)
-        }
-    }
-
-    private var destinationSections: [SettingsDestinationSection] {
-        SettingsSidebarLayout.sections.map { section in
-            SettingsDestinationSection(
-                id: section.id,
-                destinations: section.tabs.map(Self.destination(for:))
-            )
-        }
-    }
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         Group {
             if #available(macOS 15, *) {
-                SettingsModernShell(
-                    selectedTab: $selectedTab,
-                    sections: destinationSections,
-                    detail: { tab in AnyView(settingsDetail(for: tab)) }
+                SettingsSplitShell(
+                    state: state,
+                    searchText: $searchText,
+                    recoveryCount: dictationRecovery.recoveries.count,
+                    detail: { detail }
                 )
             } else {
-                SettingsSidebarShell(
-                    selectedTab: $selectedTab,
-                    sections: destinationSections,
-                    detail: settingsDetail(for:)
+                SettingsLegacyShell(
+                    state: state,
+                    searchText: $searchText,
+                    recoveryCount: dictationRecovery.recoveries.count,
+                    detail: { detail }
                 )
             }
         }
-        .frame(minWidth: 950, idealWidth: 1050, minHeight: 550, idealHeight: 600)
+        .frame(minWidth: 860, idealWidth: 1000, minHeight: 540, idealHeight: 660)
         .onAppear {
-            navigateToFileTranscriptionIfNeeded()
+            openFileTranscriptionIfRequested()
         }
         .onChange(of: fileTranscription.showFilePickerFromMenu) { _, _ in
-            navigateToFileTranscriptionIfNeeded()
+            openFileTranscriptionIfRequested()
         }
         .onChange(of: homeViewModel.navigateToHistory) { _, navigate in
-            if navigate {
-                let historyViewModel = ServiceContainer.shared.historyViewModel
-                historyViewModel.selectedAppFilter = homeViewModel.pendingHistoryAppBundleIdentifier
-                historyViewModel.selectedTimeRange = homeViewModel.pendingHistoryTimeRange
-                if let recordID = homeViewModel.pendingHistoryRecordID {
-                    historyViewModel.selectedRecordIDs = [recordID]
-                }
-                selectedTab = .history
-                homeViewModel.navigateToHistory = false
-                homeViewModel.clearPendingHistoryNavigation()
+            guard navigate else { return }
+            let historyViewModel = ServiceContainer.shared.historyViewModel
+            historyViewModel.selectedAppFilter = homeViewModel.pendingHistoryAppBundleIdentifier
+            historyViewModel.selectedTimeRange = homeViewModel.pendingHistoryTimeRange
+            if let recordID = homeViewModel.pendingHistoryRecordID {
+                historyViewModel.selectedRecordIDs = [recordID]
             }
+            state.select(.history)
+            homeViewModel.navigateToHistory = false
+            homeViewModel.clearPendingHistoryNavigation()
         }
         .onReceive(settingsNavigation.$request.compactMap { $0 }) { request in
-            selectedTab = request.tab
+            searchText = ""
+            state.open(request.tab, row: request.row)
+            settingsNavigation.didHandle(request)
         }
     }
 
-    private func navigateToFileTranscriptionIfNeeded() {
-        if fileTranscription.showFilePickerFromMenu {
-            selectedTab = .fileTranscription
+    private var detail: some View {
+        ZStack {
+            page(for: state.selection)
+                .id(state.selection)
+                .transition(pageTransition)
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .environment(\.settingsFocusRequest, state.focusRequest)
+        .leiseAnimation(LeiseMotion.ui, value: state.selection)
+    }
+
+    private var pageTransition: AnyTransition {
+        reduceMotion
+            ? .opacity
+            : .asymmetric(
+                insertion: .opacity.combined(with: .offset(y: LeiseSpacing.xs)),
+                removal: .opacity
+            )
+    }
+
+    private func openFileTranscriptionIfRequested() {
+        guard fileTranscription.showFilePickerFromMenu else { return }
+        state.transcribeMode = .file
+        state.select(.transcribe)
     }
 
     @ViewBuilder
-    private func settingsDetail(for tab: SettingsTab) -> some View {
+    private func page(for tab: SettingsTab) -> some View {
         switch tab {
-        case .home:
-            HomeSettingsView()
-        case .general:
-            GeneralSettingsView()
-        case .appearance:
-            AppearanceSettingsView()
-        case .hotkeys:
-            HotkeySettingsView()
-        case .recorder:
-            AudioRecorderView(viewModel: ServiceContainer.shared.audioRecorderViewModel)
-        case .dictationRecovery:
-            DictationRecoveryView()
-        case .fileTranscription:
-            FileTranscriptionView()
+        case .overview:
+            OverviewPage()
         case .history:
             HistoryView()
         case .dictionary:
-            DictionarySettingsView()
-        case .profiles:
+            DictionarySettingsView(section: $state.dictionarySection)
+        case .transcribe:
+            TranscribePage(mode: $state.transcribeMode)
+        case .dictation:
+            DictationSettingsPage()
+        case .apps:
             ProfilesSettingsView()
-        case .parakeet:
-            ParakeetSettingsPage()
+        case .audio:
+            AudioSettingsPage()
+        case .appearance:
+            AppearanceSettingsPage()
         case .advanced:
             AdvancedSettingsView()
-        case .errorLog:
-            ErrorLogView()
-        case .about:
-            AboutSettingsView()
         }
     }
 }
 
+// MARK: - Shells
+
 @available(macOS 15, *)
-private struct SettingsModernShell: View {
-    @Binding var selectedTab: SettingsTab
-    let sections: [SettingsDestinationSection]
-    let detail: (SettingsTab) -> AnyView
-
-    @State private var sidebarSearchText = ""
-
-    private var filteredSections: [SettingsDestinationSection] {
-        let query = sidebarSearchText.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !query.isEmpty else { return sections }
-
-        return sections
-            .map { section in
-                SettingsDestinationSection(
-                    id: section.id,
-                    destinations: section.destinations.filter { destination in
-                        destination.title.localizedCaseInsensitiveContains(query)
-                    }
-                )
-            }
-            .filter { !$0.destinations.isEmpty }
-    }
+private struct SettingsSplitShell<Detail: View>: View {
+    @ObservedObject var state: SettingsWindowState
+    @Binding var searchText: String
+    let recoveryCount: Int
+    @ViewBuilder let detail: () -> Detail
 
     var body: some View {
         NavigationSplitView {
-            List(selection: $selectedTab) {
-                ForEach(filteredSections) { section in
-                    Section {
-                        ForEach(section.destinations) { destination in
-                            SettingsSidebarRow(destination: destination)
-                                .tag(destination.tab)
-                        }
-                    }
-                }
-            }
-            .listStyle(.sidebar)
-            .searchable(
-                text: $sidebarSearchText,
-                placement: .sidebar,
-                prompt: Text(String(localized: "Search Settings"))
-            )
-            .navigationSplitViewColumnWidth(min: 240, ideal: 270, max: 320)
+            SettingsSidebar(state: state, query: searchText, recoveryCount: recoveryCount)
+                .searchable(
+                    text: $searchText,
+                    placement: .sidebar,
+                    prompt: Text(String(localized: "Search Settings"))
+                )
+                .navigationSplitViewColumnWidth(min: 200, ideal: 232, max: 300)
         } detail: {
-            detail(selectedTab)
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            detail()
         }
     }
 }
 
-private struct SettingsSidebarShell<DetailContent: View>: View {
-    @Binding var selectedTab: SettingsTab
-    let sections: [SettingsDestinationSection]
-    let detail: (SettingsTab) -> DetailContent
+/// macOS 14: the default NavigationSplitView sidebar reveal glitches there, so
+/// the sidebar is a plain column with its own toggle and search field.
+private struct SettingsLegacyShell<Detail: View>: View {
+    @ObservedObject var state: SettingsWindowState
+    @Binding var searchText: String
+    let recoveryCount: Int
+    @ViewBuilder let detail: () -> Detail
 
     @State private var isSidebarVisible = true
 
     var body: some View {
         HStack(spacing: 0) {
             if isSidebarVisible {
-                List(selection: $selectedTab) {
-                    ForEach(sections) { section in
-                        Section {
-                            ForEach(section.destinations) { destination in
-                                SettingsSidebarRow(destination: destination)
-                                    .tag(destination.tab)
-                            }
-                        }
+                SettingsSidebar(state: state, query: searchText, recoveryCount: recoveryCount)
+                    .safeAreaInset(edge: .top, spacing: 0) {
+                        NativeSearchField(text: $searchText, prompt: String(localized: "Search Settings"))
+                            .padding(.horizontal, LeiseSpacing.s + LeiseSpacing.xs)
+                            .padding(.vertical, LeiseSpacing.s)
                     }
-                }
-                .listStyle(.sidebar)
-                .frame(width: 240)
+                    .frame(width: 232)
 
                 Divider()
             }
 
-            detail(selectedTab)
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            detail()
         }
-        // macOS 14 glitches when the default NavigationSplitView sidebar reveal animates.
-        // Use a custom zero-duration toggle instead.
         .toolbar {
             ToolbarItem(placement: .navigation) {
                 Button(action: toggleSidebar) {
@@ -281,638 +291,241 @@ private struct SettingsSidebarShell<DetailContent: View>: View {
     }
 }
 
-private struct SettingsSidebarRow: View {
-    let destination: SettingsDestination
+/// The native search field (macOS 14 sidebar, history list).
+struct NativeSearchField: NSViewRepresentable {
+    @Binding var text: String
+    let prompt: String
 
-    var body: some View {
-        HStack(spacing: 10) {
-            Label(destination.title, systemImage: destination.systemImage)
+    func makeNSView(context: Context) -> NSSearchField {
+        let field = NSSearchField()
+        field.placeholderString = prompt
+        field.sendsSearchStringImmediately = true
+        field.delegate = context.coordinator
+        field.setAccessibilityLabel(prompt)
+        return field
+    }
 
-            Spacer(minLength: 8)
+    func updateNSView(_ field: NSSearchField, context: Context) {
+        if field.stringValue != text {
+            field.stringValue = text
+        }
+    }
 
-            if let badge = destination.badge {
-                SettingsSidebarBadge(title: destination.title, count: badge)
+    func makeCoordinator() -> Coordinator {
+        Coordinator(text: $text)
+    }
+
+    final class Coordinator: NSObject, NSSearchFieldDelegate {
+        private let text: Binding<String>
+
+        init(text: Binding<String>) {
+            self.text = text
+        }
+
+        func controlTextDidChange(_ notification: Notification) {
+            guard let field = notification.object as? NSSearchField else { return }
+            MainActor.assumeIsolated {
+                text.wrappedValue = field.stringValue
             }
         }
-        .contentShape(Rectangle())
     }
 }
 
-private struct SettingsSidebarBadge: View {
-    let title: String
-    let count: Int
+// MARK: - Sidebar
+
+private enum SidebarItem: Hashable {
+    case page(SettingsTab)
+    case result(SettingsRow)
+}
+
+private struct SettingsSidebar: View {
+    @ObservedObject var state: SettingsWindowState
+    let query: String
+    let recoveryCount: Int
+
+    private var trimmedQuery: String {
+        query.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private var isSearching: Bool { !trimmedQuery.isEmpty }
 
     var body: some View {
-        Text("\(count)")
-            .font(.caption2.weight(.semibold))
-            .monospacedDigit()
-            .padding(.horizontal, 6)
-            .padding(.vertical, 2)
-            .background(.tertiary, in: Capsule())
-            .foregroundStyle(.secondary)
-            .accessibilityLabel("\(title), \(count) updates")
-    }
-}
-
-struct RecordingSettingsView: View {
-    /// When true, the view renders only its sections so it can live inside a
-    /// parent Form (it must still be installed as a real child view so its
-    /// @State keeps its identity).
-    var embeddedInParentForm = false
-    @ObservedObject private var dictation = ServiceContainer.shared.dictationViewModel
-    @ObservedObject private var audioDevice = ServiceContainer.shared.audioDeviceService
-    @State private var customSounds: [String] = SoundChoice.installedCustomSounds()
-    @State private var draggedInputDevicePriorityItem: AudioInputDevicePriorityItem?
-    private let soundService = ServiceContainer.shared.soundService
-
-    init(embeddedInParentForm: Bool = false) {
-        self.embeddedInParentForm = embeddedInParentForm
+        List(selection: selection) {
+            if isSearching {
+                searchResults
+            } else {
+                pages
+            }
+        }
+        .listStyle(.sidebar)
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            SettingsSidebarFooter()
+        }
     }
 
-    private var needsPermissions: Bool {
-        dictation.needsMicPermission || dictation.needsAccessibilityPermission
-    }
-
-    private var inputDeviceSelectionBinding: Binding<String?> {
+    private var selection: Binding<SidebarItem?> {
         Binding(
-            get: { audioDevice.selectedDeviceUID },
-            set: { newValue in
-                if let newValue {
-                    audioDevice.selectInputDeviceAsPrimary(newValue)
-                } else {
-                    audioDevice.clearInputDevicePriorityList()
+            get: {
+                if isSearching {
+                    return state.searchSelection.map(SidebarItem.result)
+                }
+                return .page(state.selection)
+            },
+            set: { item in
+                switch item {
+                case .page(let tab):
+                    state.select(tab)
+                case .result(let row):
+                    state.searchSelection = row
+                    state.reveal(row)
+                case nil:
+                    break
                 }
             }
         )
     }
 
     @ViewBuilder
-    private var microphonePriorityEditor: some View {
-        if shouldShowMicrophonePriorityList {
-            LabeledContent(String(localized: "Fallback Order")) {
-                VStack(alignment: .trailing, spacing: 6) {
-                    microphonePriorityList
-                        .frame(maxWidth: 560, alignment: .leading)
-
-                    HStack(spacing: 12) {
-                        if disconnectedMicrophoneCount > 1 {
-                            Button(String(localized: "Remove Disconnected")) {
-                                audioDevice.removeDisconnectedInputDevicePriorityItems()
-                            }
-                            .buttonStyle(.link)
-                            .controlSize(.small)
-                        }
-
-                        Spacer()
-
-                        if !audioDevice.inputDevicePriorityCandidates.isEmpty {
-                            microphonePriorityAddMenu
-                        }
-                    }
+    private var pages: some View {
+        ForEach(SettingsSidebarLayout.sections, id: \.id) { section in
+            Section {
+                ForEach(section.tabs) { tab in
+                    Label(tab.title, systemImage: tab.systemImage)
+                        .badge(tab == .history ? recoveryCount : 0)
+                        .accessibilityValue(
+                            tab == .history && recoveryCount > 0
+                                ? String(localized: "Not transcribed: \(recoveryCount)")
+                                : ""
+                        )
+                        .tag(SidebarItem.page(tab))
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
-            }
-        } else if !audioDevice.inputDevicePriorityCandidates.isEmpty {
-            LabeledContent(String(localized: "Fallback Microphones")) {
-                microphonePriorityAddMenu
-            }
-        }
-    }
-
-    private var disconnectedMicrophoneCount: Int {
-        audioDevice.inputDevicePriorityList.reduce(into: 0) { count, item in
-            if !audioDevice.isInputDevicePriorityItemAvailable(item) {
-                count += 1
+            } header: {
+                if let title = SettingsSidebarLayout.title(forSection: section.id) {
+                    Text(title)
+                }
             }
         }
-    }
-
-    private var shouldShowMicrophonePriorityList: Bool {
-        let priorityList = audioDevice.inputDevicePriorityList
-        guard priorityList.count == 1, let item = priorityList.first else {
-            return priorityList.count > 1
-        }
-
-        return !audioDevice.isInputDevicePriorityItemAvailable(item)
     }
 
     @ViewBuilder
-    private var microphonePriorityList: some View {
-        if !audioDevice.inputDevicePriorityList.isEmpty {
-            VStack(spacing: 0) {
-                ForEach(Array(audioDevice.inputDevicePriorityList.enumerated()), id: \.element.id) { index, item in
-                    microphonePriorityRow(index: index, item: item)
-                        .onDrag {
-                            draggedInputDevicePriorityItem = item
-                            return NSItemProvider(object: item.uid as NSString)
-                        }
-                        .onDrop(
-                            of: ["public.text"],
-                            delegate: MicrophonePriorityDropDelegate(
-                                item: item,
-                                audioDevice: audioDevice,
-                                draggedItem: $draggedInputDevicePriorityItem
-                            )
-                        )
-
-                    if index < audioDevice.inputDevicePriorityList.count - 1 {
-                        Divider()
-                            .padding(.leading, 40)
-                    }
-                }
-            }
-        }
-    }
-
-    private var microphonePriorityAddMenu: some View {
-        Menu {
-            ForEach(audioDevice.inputDevicePriorityCandidates) { device in
-                Button(audioDevice.displayName(for: device)) {
-                    audioDevice.addInputDeviceToPriorityList(device)
-                }
-            }
-        } label: {
-            Label(String(localized: "Add Fallback"), systemImage: "plus")
-                .font(.callout)
-        }
-        .menuStyle(.borderlessButton)
-        .controlSize(.small)
-        .help(String(localized: "Add a fallback microphone"))
-    }
-
-    private func microphonePriorityRow(index: Int, item: AudioInputDevicePriorityItem) -> some View {
-        let isAvailable = audioDevice.isInputDevicePriorityItemAvailable(item)
-        let canMoveUp = index > 0
-        let canMoveDown = index < audioDevice.inputDevicePriorityList.count - 1
-
-        return HStack(spacing: 8) {
-            Image(systemName: "line.3.horizontal")
-                .foregroundStyle(.tertiary)
-                .font(.system(size: 11, weight: .semibold))
-                .frame(width: 12)
-
-            Text("\(index + 1).")
-                .font(.caption.monospacedDigit())
+    private var searchResults: some View {
+        let results = SettingsSearchIndex.results(for: trimmedQuery)
+        if results.isEmpty {
+            Text(String(localized: "No results for “\(trimmedQuery)”."))
+                .font(.subheadline)
                 .foregroundStyle(.secondary)
-                .frame(width: 20, alignment: .trailing)
+                .fixedSize(horizontal: false, vertical: true)
+                .selectionDisabled()
+        } else {
+            Section {
+                ForEach(results) { entry in
+                    SearchResultRow(entry: entry)
+                        .tag(SidebarItem.result(entry.row))
+                }
+            } header: {
+                Text(results.count == 1
+                    ? String(localized: "1 result")
+                    : String(localized: "\(results.count) results"))
+            }
+        }
+    }
+}
 
-            Text(audioDevice.displayName(for: item))
-                .font(.callout)
+private struct SearchResultRow: View {
+    let entry: SettingsSearchEntry
+
+    var body: some View {
+        Label {
+            VStack(alignment: .leading, spacing: 1) {
+                Text(entry.title)
+                    .lineLimit(2)
+                Text(entry.page.title)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+        } icon: {
+            Image(systemName: entry.page.systemImage)
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(String(localized: "\(entry.title), \(entry.page.title)"))
+    }
+}
+
+private struct SettingsSidebarFooter: View {
+    private var version: String {
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? ""
+    }
+
+    var body: some View {
+        HStack(spacing: LeiseSpacing.s) {
+            LeiseMark()
+                .frame(height: 11)
+            Text(verbatim: "Leise \(version)")
+            Text(verbatim: "·")
+                .accessibilityHidden(true)
+            Text(String(localized: "Local, no account"))
                 .lineLimit(1)
-                .truncationMode(.middle)
-
-            if !isAvailable {
-                Text(String(localized: "Disconnected"))
-                    .font(.caption2)
-                    .foregroundStyle(.orange)
-            }
-
-            Spacer(minLength: 8)
-
-            Button {
-                audioDevice.removeInputDevicePriorityItem(item)
-            } label: {
-                Image(systemName: "trash")
-            }
-            .buttonStyle(.plain)
-            .foregroundStyle(.secondary)
-            .font(.system(size: 13))
-            .help(String(localized: "Forget microphone"))
         }
-        .padding(.vertical, 3)
-        .frame(minHeight: 24)
-        .contentShape(Rectangle())
-        .contextMenu {
-            Button {
-                moveMicrophonePriorityItemUp(item)
-            } label: {
-                Label(String(localized: "Move Up"), systemImage: "chevron.up")
-            }
-            .disabled(!canMoveUp)
-
-            Button {
-                moveMicrophonePriorityItemDown(item)
-            } label: {
-                Label(String(localized: "Move Down"), systemImage: "chevron.down")
-            }
-            .disabled(!canMoveDown)
-        }
-        .modifier(MicrophonePriorityAccessibilityActions(
-            canMoveUp: canMoveUp,
-            canMoveDown: canMoveDown,
-            moveUp: { moveMicrophonePriorityItemUp(item) },
-            moveDown: { moveMicrophonePriorityItemDown(item) }
-        ))
+        .font(.subheadline)
+        .foregroundStyle(.secondary)
+        .padding(.horizontal, LeiseSpacing.l)
+        .padding(.vertical, LeiseSpacing.m)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(String(localized: "Leise \(version), local, no account"))
     }
+}
 
-    private func moveMicrophonePriorityItemUp(_ item: AudioInputDevicePriorityItem) {
-        guard let index = audioDevice.inputDevicePriorityList.firstIndex(of: item),
-              index > 0 else { return }
+// MARK: - Shared row parts
 
-        audioDevice.moveInputDevicePriorityItems(from: IndexSet(integer: index), to: index - 1)
-    }
-
-    private func moveMicrophonePriorityItemDown(_ item: AudioInputDevicePriorityItem) {
-        guard let index = audioDevice.inputDevicePriorityList.firstIndex(of: item),
-              index < audioDevice.inputDevicePriorityList.count - 1 else { return }
-
-        audioDevice.moveInputDevicePriorityItems(from: IndexSet(integer: index), to: index + 2)
-    }
+/// A row label: the title in Body, an optional subtitle in Secondary, and an
+/// optional ⓘ that keeps longer explanations out of the page.
+struct SettingsRowLabel: View {
+    let title: String
+    var subtitle: String?
+    var info: String?
 
     var body: some View {
-        if embeddedInParentForm {
-            settingsSections
-        } else {
-            Form {
-                settingsSections
+        VStack(alignment: .leading, spacing: 2) {
+            HStack(spacing: LeiseSpacing.xs) {
+                Text(title)
+                if let info {
+                    SettingsInfoButton(text: info, topic: title)
+                }
             }
-            .formStyle(.grouped)
-            .padding()
-            .frame(minWidth: 500, minHeight: 300)
+            if let subtitle {
+                Text(subtitle)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
         }
     }
-
-    @ViewBuilder
-    private var settingsSections: some View {
-            if needsPermissions {
-                PermissionsBanner(dictation: dictation)
-            }
-
-            Section(String(localized: "Microphone")) {
-                Picker(String(localized: "Primary Microphone"), selection: inputDeviceSelectionBinding) {
-                    Text(audioDevice.inputDevices.isEmpty
-                        ? String(localized: "No Microphone Available")
-                        : String(localized: "System Default")
-                    )
-                    .tag(nil as String?)
-                    Divider()
-                    ForEach(audioDevice.inputDevices) { device in
-                        Text(audioDevice.displayName(for: device)).tag(device.uid as String?)
-                    }
-                }
-
-                microphonePriorityEditor
-
-                if shouldShowMicrophonePriorityList {
-                    Text(String(localized: "Leise tries connected microphones from top to bottom. Disconnected microphones are kept so they work again when reconnected."))
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-
-                if audioDevice.inputDevices.isEmpty {
-                    Label(
-                        String(localized: "No connected microphones detected. Connect a microphone to choose or test it."),
-                        systemImage: "mic.slash"
-                    )
-                    .foregroundStyle(.orange)
-                    .font(.caption)
-                }
-
-                if let message = audioDevice.selectedDeviceStatusMessage {
-                    Label(message, systemImage: "exclamationmark.triangle")
-                        .foregroundStyle(.orange)
-                        .font(.caption)
-                }
-
-                if audioDevice.isPreviewActive {
-                    HStack(spacing: 8) {
-                        Image(systemName: "mic.fill")
-                            .foregroundStyle(.secondary)
-                            .font(.caption)
-
-                        AudioWaveformView(
-                            audioLevel: audioDevice.previewAudioLevel,
-                            isSetup: false,
-                            compact: true
-                        )
-                        .foregroundStyle(.green)
-                    }
-                    .padding(.vertical, 4)
-                }
-
-                Button(audioDevice.isPreviewActive
-                    ? String(localized: "Stop Preview")
-                    : String(localized: "Test Microphone")
-                ) {
-                    if audioDevice.isPreviewActive {
-                        audioDevice.stopPreview()
-                    } else {
-                        audioDevice.startPreview()
-                    }
-                }
-                .disabled(
-                    !audioDevice.isPreviewActive
-                        && (dictation.needsMicPermission || audioDevice.inputDevices.isEmpty)
-                )
-
-                if let error = audioDevice.previewError {
-                    Label(error.localizedDescription, systemImage: "exclamationmark.triangle.fill")
-                        .foregroundStyle(.red)
-                        .font(.caption)
-                }
-
-                if let name = audioDevice.disconnectedDeviceName {
-                    Label(
-                        String(localized: "Microphone disconnected. Falling back to system default."),
-                        systemImage: "exclamationmark.triangle"
-                    )
-                    .foregroundStyle(.orange)
-                    .font(.caption)
-                    .onAppear {
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 5) {
-                            if audioDevice.disconnectedDeviceName == name {
-                                audioDevice.disconnectedDeviceName = nil
-                            }
-                        }
-                    }
-                }
-            }
-
-            Section(String(localized: "Sound")) {
-                Toggle(String(localized: "Play sound feedback"), isOn: $dictation.soundFeedbackEnabled)
-
-                if dictation.soundFeedbackEnabled {
-                    SoundEventPicker(event: .recordingStarted, soundService: soundService, customSounds: $customSounds)
-                    SoundEventPicker(event: .transcriptionSuccess, soundService: soundService, customSounds: $customSounds)
-                    SoundEventPicker(event: .error, soundService: soundService, customSounds: $customSounds)
-                }
-
-                Text(String(localized: "Plays a sound when recording starts and when transcription completes."))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-
-            }
-            .onAppear {
-                customSounds = SoundChoice.installedCustomSounds()
-            }
-
-            Section(String(localized: "Clipboard")) {
-                Toggle(String(localized: "Preserve clipboard content"), isOn: $dictation.preserveClipboard)
-
-                Text(String(localized: "Restores your clipboard after text insertion. Without this, your clipboard contains the transcribed text after dictation."))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-
-            Section(String(localized: "Output Formatting")) {
-                Toggle(String(localized: "App-aware formatting"), isOn: Binding(
-                    get: { UserDefaults.standard.bool(forKey: UserDefaultsKeys.appFormattingEnabled) },
-                    set: { UserDefaults.standard.set($0, forKey: UserDefaultsKeys.appFormattingEnabled) }
-                ))
-
-                Text(String(localized: "When enabled, Leise uses target-app rules and available cursor context for smarter insertion. Profile output format settings still choose the inserted format for each profile."))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-
-                Toggle(String(localized: "Normalize spoken numbers to digits"), isOn: Binding(
-                    get: { TranscriptionNormalizationService.numberNormalizationEnabled() },
-                    set: { UserDefaults.standard.set($0, forKey: UserDefaultsKeys.transcriptionNumberNormalizationEnabled) }
-                ))
-
-                Text(String(localized: "Converts spoken numbers in supported languages into digits before insertion and export."))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-
-            Section(String(localized: "Audio Ducking")) {
-                Toggle(String(localized: "Reduce system volume during recording"), isOn: $dictation.audioDuckingEnabled)
-
-                if dictation.audioDuckingEnabled {
-                    HStack {
-                        Image(systemName: "speaker.slash")
-                            .foregroundStyle(.secondary)
-                        Slider(value: $dictation.audioDuckingLevel, in: 0...0.5, step: 0.05)
-                        Image(systemName: "speaker.wave.2")
-                            .foregroundStyle(.secondary)
-                    }
-
-                    Text(String(localized: "Percentage of your current volume to use during recording. 0% mutes completely."))
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-            }
-
-            Section(String(localized: "Media Pause")) {
-                Toggle(String(localized: "Pause media playback during recording"), isOn: $dictation.mediaPauseEnabled)
-
-                Text(String(localized: "Automatically pauses music and videos while recording and resumes when done. Uses macOS system media controls - may not work with all apps."))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-
-            if needsPermissions {
-                Section(String(localized: "Permissions")) {
-                    if dictation.needsMicPermission {
-                        HStack {
-                            Label(
-                                String(localized: "Microphone"),
-                                systemImage: "mic.slash"
-                            )
-                            .foregroundStyle(.orange)
-
-                            Spacer()
-
-                            Button(String(localized: "Grant Access")) {
-                                dictation.requestMicPermission()
-                            }
-                            .buttonStyle(.bordered)
-                            .controlSize(.small)
-                        }
-                    }
-
-                    if dictation.needsAccessibilityPermission {
-                        HStack {
-                            Label(
-                                String(localized: "Accessibility"),
-                                systemImage: "lock.shield"
-                            )
-                            .foregroundStyle(.orange)
-
-                            Spacer()
-
-                            Button(String(localized: "Grant Access")) {
-                                dictation.requestAccessibilityPermission()
-                            }
-                            .buttonStyle(.bordered)
-                            .controlSize(.small)
-                        }
-                    }
-                }
-            }
-    }
-
 }
 
-// MARK: - Sound Event Picker
+/// ⓘ: opens a popover with the explanation that used to be a grey footnote.
+struct SettingsInfoButton: View {
+    let text: String
+    var topic: String?
 
-private struct SoundEventPicker: View {
-    let event: SoundEvent
-    let soundService: SoundService
-    @Binding var customSounds: [String]
-    @State private var selection: String
-
-    init(event: SoundEvent, soundService: SoundService, customSounds: Binding<[String]>) {
-        self.event = event
-        self.soundService = soundService
-        self._customSounds = customSounds
-        self._selection = State(initialValue: soundService.choice(for: event).storageKey)
-    }
+    @State private var isPresented = false
 
     var body: some View {
-        HStack {
-            Picker(event.displayName, selection: $selection) {
-                Text(String(localized: "Default")).tag(event.defaultChoice.storageKey)
-
-                Divider()
-
-                ForEach(SoundChoice.bundledSounds, id: \.name) { sound in
-                    Text(sound.displayName).tag(SoundChoice.bundled(sound.name).storageKey)
-                }
-
-                if !customSounds.isEmpty {
-                    Divider()
-                    ForEach(customSounds, id: \.self) { name in
-                        Text(name).tag(SoundChoice.custom(name).storageKey)
-                    }
-                }
-
-                Divider()
-
-                ForEach(SoundChoice.systemSounds, id: \.self) { name in
-                    Text(name).tag(SoundChoice.system(name).storageKey)
-                }
-
-                Divider()
-
-                Text(String(localized: "None")).tag(SoundChoice.none.storageKey)
-            }
-            .onChange(of: selection) { _, newValue in
-                let choice = SoundChoice(storageKey: newValue)
-                soundService.updateChoice(for: event, choice: choice)
-                soundService.preview(choice)
-            }
-
-            Button {
-                soundService.preview(SoundChoice(storageKey: selection))
-            } label: {
-                Image(systemName: "speaker.wave.2")
-            }
-            .buttonStyle(.borderless)
-            .help(String(localized: "Preview sound"))
-
-            Button {
-                importCustomSound()
-            } label: {
-                Image(systemName: "plus")
-            }
-            .buttonStyle(.borderless)
-            .help(String(localized: "Add custom sound"))
+        Button {
+            isPresented.toggle()
+        } label: {
+            Image(systemName: "info.circle")
+                .imageScale(.small)
+                .foregroundStyle(.secondary)
         }
-    }
-
-    private func importCustomSound() {
-        let panel = NSOpenPanel()
-        panel.allowedContentTypes = SoundChoice.allowedContentTypes
-        panel.allowsMultipleSelection = false
-        panel.message = String(localized: "Choose a sound file")
-        guard panel.runModal() == .OK, let url = panel.url else { return }
-        do {
-            let filename = try soundService.importCustomSound(from: url)
-            customSounds = SoundChoice.installedCustomSounds()
-            selection = SoundChoice.custom(filename).storageKey
-        } catch {
-            // File copy failed - silently ignore
-        }
-    }
-}
-
-private struct MicrophonePriorityAccessibilityActions: ViewModifier {
-    let canMoveUp: Bool
-    let canMoveDown: Bool
-    let moveUp: () -> Void
-    let moveDown: () -> Void
-
-    @ViewBuilder
-    func body(content: Content) -> some View {
-        if canMoveUp && canMoveDown {
-            content
-                .accessibilityAction(named: Text(String(localized: "Move Up")), moveUp)
-                .accessibilityAction(named: Text(String(localized: "Move Down")), moveDown)
-        } else if canMoveUp {
-            content
-                .accessibilityAction(named: Text(String(localized: "Move Up")), moveUp)
-        } else if canMoveDown {
-            content
-                .accessibilityAction(named: Text(String(localized: "Move Down")), moveDown)
-        } else {
-            content
-        }
-    }
-}
-
-private struct MicrophonePriorityDropDelegate: DropDelegate {
-    let item: AudioInputDevicePriorityItem
-    let audioDevice: AudioDeviceService
-    @Binding var draggedItem: AudioInputDevicePriorityItem?
-
-    func dropEntered(info: DropInfo) {
-        guard let draggedItem,
-              draggedItem != item,
-              let fromIndex = audioDevice.inputDevicePriorityList.firstIndex(of: draggedItem),
-              let toIndex = audioDevice.inputDevicePriorityList.firstIndex(of: item) else { return }
-
-        let destination = toIndex > fromIndex ? toIndex + 1 : toIndex
-        audioDevice.moveInputDevicePriorityItems(from: IndexSet(integer: fromIndex), to: destination)
-    }
-
-    func performDrop(info: DropInfo) -> Bool {
-        draggedItem = nil
-        return true
-    }
-}
-
-// MARK: - Permissions Banner
-
-struct PermissionsBanner: View {
-    @ObservedObject var dictation: DictationViewModel
-
-    var body: some View {
-        Section {
-            if dictation.needsMicPermission {
-                HStack {
-                    Label(
-                        String(localized: "Microphone access required"),
-                        systemImage: "mic.slash"
-                    )
-                    .foregroundStyle(.red)
-
-                    Spacer()
-
-                    Button(String(localized: "Grant Access")) {
-                        dictation.requestMicPermission()
-                    }
-                    .buttonStyle(.bordered)
-                    .controlSize(.small)
-                }
-            }
-
-            if dictation.needsAccessibilityPermission {
-                HStack {
-                    Label(
-                        String(localized: "Accessibility access required"),
-                        systemImage: "lock.shield"
-                    )
-                    .foregroundStyle(.red)
-
-                    Spacer()
-
-                    Button(String(localized: "Grant Access")) {
-                        dictation.requestAccessibilityPermission()
-                    }
-                    .buttonStyle(.bordered)
-                    .controlSize(.small)
-                }
-            }
+        .buttonStyle(.borderless)
+        .help(text)
+        .accessibilityLabel(topic.map { String(localized: "More about \($0)") } ?? String(localized: "More information"))
+        .popover(isPresented: $isPresented, arrowEdge: .bottom) {
+            Text(text)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(LeiseSpacing.m)
+                .frame(width: 280, alignment: .leading)
         }
     }
 }

@@ -18,6 +18,20 @@ enum HistoryDateGroup: Int, CaseIterable, Identifiable {
         case .older: String(localized: "Older")
         }
     }
+
+    /// The section a dictation from `date` belongs to.
+    static func containing(_ date: Date, now: Date = Date(), calendar: Calendar = .current) -> HistoryDateGroup {
+        let todayStart = calendar.startOfDay(for: now)
+        let yesterdayStart = calendar.date(byAdding: .day, value: -1, to: todayStart) ?? todayStart
+        let weekStart = calendar.dateInterval(of: .weekOfYear, for: now)?.start ?? todayStart
+        let monthStart = calendar.dateInterval(of: .month, for: now)?.start ?? todayStart
+
+        if date >= todayStart { return .today }
+        if date >= yesterdayStart { return .yesterday }
+        if date >= weekStart { return .thisWeek }
+        if date >= monthStart { return .lastMonth }
+        return .older
+    }
 }
 
 struct HistorySection: Identifiable {
@@ -348,22 +362,10 @@ final class HistoryViewModel: ObservableObject {
     }
 
     private static func computeSections(_ records: [TranscriptionRecord]) -> [HistorySection] {
-        let cal = Calendar.current
         let now = Date()
-        let todayStart = cal.startOfDay(for: now)
-        let yesterdayStart = cal.date(byAdding: .day, value: -1, to: todayStart)!
-        let weekStart = cal.dateInterval(of: .weekOfYear, for: now)?.start ?? todayStart
-        let monthStart = cal.dateInterval(of: .month, for: now)?.start ?? todayStart
-
         var buckets: [HistoryDateGroup: [TranscriptionRecord]] = [:]
         for record in records {
-            let group: HistoryDateGroup
-            if record.timestamp >= todayStart { group = .today }
-            else if record.timestamp >= yesterdayStart { group = .yesterday }
-            else if record.timestamp >= weekStart { group = .thisWeek }
-            else if record.timestamp >= monthStart { group = .lastMonth }
-            else { group = .older }
-            buckets[group, default: []].append(record)
+            buckets[HistoryDateGroup.containing(record.timestamp, now: now), default: []].append(record)
         }
         return HistoryDateGroup.allCases.compactMap { group in
             guard let records = buckets[group], !records.isEmpty else { return nil }

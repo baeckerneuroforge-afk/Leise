@@ -1,128 +1,97 @@
 import SwiftUI
-import UniformTypeIdentifiers
 
-struct ErrorLogView: View {
-    @ObservedObject private var errorLogService = ServiceContainer.shared.errorLogService
+/// Erweitert › Diagnose › Fehlerprotokoll: the recorded errors, newest first,
+/// inside a disclosure row.
+struct ErrorLogDisclosure: View {
+    @ObservedObject var errorLogService: ErrorLogService
 
-    @State private var showClearConfirmation = false
-    @State private var exportErrorMessage: String?
+    @State private var isExpanded = false
+    @State private var showsClearConfirmation = false
+    @Environment(\.settingsHighlightedRow) private var highlightedRow
+
+    /// More rows than this belong in the exported diagnostics.
+    private static let visibleEntryLimit = 50
+
+    private var entries: [ErrorLogEntry] { errorLogService.entries }
+
+    private var countText: String {
+        switch entries.count {
+        case 0: String(localized: "None")
+        case 1: String(localized: "1 entry")
+        default: String(localized: "\(entries.count) entries")
+        }
+    }
 
     var body: some View {
-        Group {
-            if errorLogService.entries.isEmpty {
-                emptyState
+        DisclosureGroup(isExpanded: $isExpanded) {
+            if entries.isEmpty {
+                Label(String(localized: "No errors recorded."), systemImage: "checkmark.circle")
+                    .foregroundStyle(.secondary)
             } else {
-                errorList
-            }
-        }
-        .frame(minWidth: 400, minHeight: 300)
-        .toolbar {
-            ToolbarItem(placement: .automatic) {
-                Button {
-                    exportDiagnostics()
-                } label: {
-                    Label(String(localized: "Export Diagnostics"), systemImage: "square.and.arrow.up")
+                ForEach(entries.prefix(Self.visibleEntryLimit)) { entry in
+                    ErrorLogRow(entry: entry)
                 }
-            }
-
-            ToolbarItem(placement: .automatic) {
-                Button(role: .destructive) {
-                    showClearConfirmation = true
-                } label: {
-                    Label(String(localized: "Clear All"), systemImage: "trash")
+                if entries.count > Self.visibleEntryLimit {
+                    Text(String(localized: "\(entries.count - Self.visibleEntryLimit) older entries are in the exported diagnostics."))
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
                 }
-                .disabled(errorLogService.entries.isEmpty)
-                .confirmationDialog(
-                    String(localized: "Clear Error Log?"),
-                    isPresented: $showClearConfirmation
-                ) {
-                    Button(String(localized: "Clear All"), role: .destructive) {
-                        errorLogService.clearAll()
+                HStack {
+                    Spacer()
+                    Button(String(localized: "Clear Log…"), role: .destructive) {
+                        showsClearConfirmation = true
                     }
-                } message: {
-                    Text(String(localized: "This will permanently delete all recorded errors."))
                 }
             }
+        } label: {
+            HStack {
+                Text(SettingsRow.errorLog.title)
+                Spacer()
+                Text(countText)
+                    .monospacedDigit()
+                    .foregroundStyle(.secondary)
+            }
+            .accessibilityElement(children: .combine)
         }
-        .alert(String(localized: "Export Failed"), isPresented: exportErrorPresented) {
-            Button(String(localized: "OK"), role: .cancel) {
-                exportErrorMessage = nil
+        .settingsRow(.errorLog)
+        .onChange(of: highlightedRow) { _, row in
+            if row == .errorLog {
+                withLeiseAnimation(LeiseMotion.shape) { isExpanded = true }
+            }
+        }
+        .confirmationDialog(
+            String(localized: "Clear Error Log?"),
+            isPresented: $showsClearConfirmation
+        ) {
+            Button(String(localized: "Clear All"), role: .destructive) {
+                withLeiseAnimation(LeiseMotion.ui) {
+                    errorLogService.clearAll()
+                }
             }
         } message: {
-            Text(exportErrorMessage ?? "")
+            Text(String(localized: "This will permanently delete all recorded errors."))
         }
     }
+}
 
-    private var emptyState: some View {
-        VStack(spacing: 12) {
-            Image(systemName: "checkmark.circle")
-                .font(.system(size: 48))
-                .foregroundStyle(.secondary)
-            Text(String(localized: "No errors recorded."))
-                .font(.title3)
-                .foregroundStyle(.secondary)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-    }
+private struct ErrorLogRow: View {
+    let entry: ErrorLogEntry
 
-    private var errorList: some View {
-        List(errorLogService.entries) { entry in
-            HStack(alignment: .top, spacing: 10) {
-                Image(systemName: entry.categoryIcon)
-                    .foregroundStyle(.red)
-                    .font(.system(size: 14))
-                    .frame(width: 20, alignment: .center)
-                    .padding(.top, 2)
-
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(entry.message)
-                        .font(.callout)
-                        .lineLimit(3)
-                    HStack(spacing: 6) {
-                        Text(entry.categoryDisplayName)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                        Text("-")
-                            .font(.caption)
-                            .foregroundStyle(.quaternary)
-                        Text(entry.timestamp, style: .relative)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                }
-            }
-            .padding(.vertical, 2)
-        }
-    }
-
-    private var exportErrorPresented: Binding<Bool> {
-        Binding(
-            get: { exportErrorMessage != nil },
-            set: { presented in
-                if !presented {
-                    exportErrorMessage = nil
-                }
-            }
-        )
-    }
-
-    private func exportDiagnostics() {
-        let formatter = ISO8601DateFormatter()
-        formatter.formatOptions = [.withInternetDateTime, .withDashSeparatorInDate, .withColonSeparatorInTime]
-
-        let panel = NSSavePanel()
-        panel.allowedContentTypes = [.json]
-        panel.canCreateDirectories = true
-        panel.nameFieldStringValue = "leise-diagnostics-\(formatter.string(from: Date()).replacingOccurrences(of: ":", with: "-")).json"
-
-        guard panel.runModal() == .OK, let url = panel.url else { return }
-
-        Task { @MainActor in
-            do {
-                try await errorLogService.exportDiagnostics(to: url)
-            } catch {
-                exportErrorMessage = error.localizedDescription
+    var body: some View {
+        HStack(alignment: .firstTextBaseline, spacing: LeiseSpacing.m) {
+            Image(systemName: entry.categoryIcon)
+                .foregroundStyle(LeiseColor.record)
+                .frame(width: 16)
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(entry.message)
+                    .lineLimit(3)
+                    .textSelection(.enabled)
+                Text(verbatim: "\(entry.categoryDisplayName) · \(entry.timestamp.formatted(date: .abbreviated, time: .shortened))")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
             }
         }
+        .accessibilityElement(children: .combine)
     }
 }

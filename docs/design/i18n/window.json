@@ -1,0 +1,1654 @@
+{
+  "%@ only understands English.": {
+    "de": "%@ versteht nur Englisch.",
+    "ja": "%@は英語のみに対応しています。"
+  },
+  "%@ · done": {
+    "de": "%@ · fertig",
+    "ja": "%@ · 完了"
+  },
+  "%@ · ready": {
+    "de": "%@ · bereit",
+    "ja": "%@ · 準備完了"
+  },
+  "%@: %@ words": {
+    "de": "%1$@: %2$@ Wörter",
+    "ja": "%1$@：%2$@語"
+  },
+  "%lld dictations": {
+    "de": "%lld Diktate",
+    "ja": "%lld回の音声入力"
+  },
+  "%lld dictations, %lld words": {
+    "de": "%1$lld Diktate, %2$lld Wörter",
+    "ja": "%1$lld回の音声入力、%2$lld語"
+  },
+  "%lld entries selected": {
+    "de": "%lld Einträge ausgewählt",
+    "ja": "%lld件を選択中"
+  },
+  "%lld manual edits": {
+    "de": "%lld manuelle Bearbeitungen",
+    "ja": "%lld件の手動編集"
+  },
+  "%lld of %lld": {
+    "de": "%1$lld von %2$lld",
+    "ja": "%2$lld件中%1$lld件"
+  },
+  "%lld of %lld entries": {
+    "de": "%1$lld von %2$lld Einträgen",
+    "ja": "%2$lld件中%1$lld件"
+  },
+  "%lld older entries are in the exported diagnostics.": {
+    "de": "%lld ältere Einträge stehen in der exportierten Diagnose.",
+    "ja": "それ以前の%lld件は、書き出した診断情報に含まれています。"
+  },
+  "%lld results": {
+    "de": "%lld Treffer",
+    "ja": "%lld件の結果"
+  },
+  "%lld words": {
+    "de": "%lld Wörter",
+    "ja": "%lld語"
+  },
+  "%lld words changed": {
+    "de": "%lld Wörter geändert",
+    "ja": "%lld語を変更"
+  },
+  "%lld words, %lld dictations": {
+    "de": "%1$lld Wörter, %2$lld Diktate",
+    "ja": "%1$lld語、%2$lld回の音声入力"
+  },
+  "1 entry": {
+    "de": "1 Eintrag",
+    "ja": "1件"
+  },
+  "1 result": {
+    "de": "1 Treffer",
+    "ja": "1件の結果"
+  },
+  "1 word": {
+    "de": "1 Wort",
+    "ja": "1語"
+  },
+  "A JSON report with app, system, permission, settings and audio-device details, plus the error log.": {
+    "de": "Ein JSON-Bericht mit Angaben zu App, System, Berechtigungen, Einstellungen und Audiogeräten sowie dem Fehlerprotokoll.",
+    "ja": "アプリ、システム、権限、設定、オーディオデバイスの情報とエラーログをまとめたJSONレポートです。"
+  },
+  "A correction replaces one spelling with another after every dictation, for example “Kesler” with “Kessler”.": {
+    "de": "Eine Korrektur ersetzt nach jedem Diktat eine Schreibweise durch eine andere, zum Beispiel „Kesler“ durch „Kessler“.",
+    "ja": "修正は、音声入力のたびにある表記を別の表記に置き換えます。たとえば「Kesler」を「Kessler」に置き換えます。"
+  },
+  "Active": {
+    "de": "Aktiv",
+    "ja": "有効"
+  },
+  "Adapt to the app": {
+    "de": "An die App anpassen",
+    "ja": "アプリに合わせる"
+  },
+  "Add App…": {
+    "de": "App hinzufügen …",
+    "ja": "アプリを追加…"
+  },
+  "Add Backup Microphone": {
+    "de": "Ersatzmikrofon hinzufügen",
+    "ja": "予備のマイクを追加"
+  },
+  "Add Correction…": {
+    "de": "Korrektur hinzufügen …",
+    "ja": "修正を追加…"
+  },
+  "Add Files…": {
+    "de": "Dateien hinzufügen …",
+    "ja": "ファイルを追加…"
+  },
+  "Add Rule": {
+    "de": "Regel hinzufügen",
+    "ja": "ルールを追加"
+  },
+  "Add Shortcut": {
+    "de": "Tastenkürzel hinzufügen",
+    "ja": "ショートカットを追加"
+  },
+  "Add Term…": {
+    "de": "Begriff hinzufügen …",
+    "ja": "用語を追加…"
+  },
+  "Add a correction or term": {
+    "de": "Korrektur oder Begriff hinzufügen",
+    "ja": "修正または用語を追加"
+  },
+  "Add microphones Leise should use when your main one is missing.": {
+    "de": "Füge Mikrofone hinzu, die Leise nutzen soll, wenn dein Hauptmikrofon fehlt.",
+    "ja": "メインのマイクが見つからないときにLeiseが使うマイクを追加します。"
+  },
+  "Add words, or restore the default list.": {
+    "de": "Füge Wörter hinzu oder stelle die Standardliste wieder her.",
+    "ja": "単語を追加するか、標準のリストに戻します。"
+  },
+  "Adjusts the level so whispered sentences are recognized too. In loud rooms the noise gets louder as well.": {
+    "de": "Passt den Pegel an, damit auch geflüsterte Sätze erkannt werden. In lauten Räumen wird dabei auch das Rauschen lauter.",
+    "ja": "ささやき声の文も認識されるようにレベルを調整します。騒がしい場所ではノイズも大きくなります。"
+  },
+  "After 180 days": {
+    "de": "Nach 180 Tagen",
+    "ja": "180日後"
+  },
+  "After 30 days": {
+    "de": "Nach 30 Tagen",
+    "ja": "30日後"
+  },
+  "After 60 days": {
+    "de": "Nach 60 Tagen",
+    "ja": "60日後"
+  },
+  "After 90 days": {
+    "de": "Nach 90 Tagen",
+    "ja": "90日後"
+  },
+  "Afterwards it holds what you had copied before.": {
+    "de": "Danach enthält sie wieder, was du vorher kopiert hattest.",
+    "ja": "挿入後は、それまでにコピーしていた内容に戻ります。"
+  },
+  "Allow Leise in Login Items first": {
+    "de": "Erlaube Leise zuerst unter „Anmeldeobjekte“",
+    "ja": "先に「ログイン項目」でLeiseを許可してください"
+  },
+  "Always applies Leise’s rules, for languages where the model leaves “comma” as a word.": {
+    "de": "Wendet immer die Regeln von Leise an, für Sprachen, in denen das Modell „Komma“ als Wort stehen lässt.",
+    "ja": "モデルが「comma」などを単語のまま残す言語向けに、常にLeiseのルールを適用します。"
+  },
+  "App": {
+    "de": "App",
+    "ja": "アプリ"
+  },
+  "App language": {
+    "de": "App-Sprache",
+    "ja": "アプリの言語"
+  },
+  "Applies To": {
+    "de": "Gilt für",
+    "ja": "適用対象"
+  },
+  "Applies to every app without its own rule": {
+    "de": "Gilt für jede App ohne eigene Regel",
+    "ja": "独自のルールがないすべてのアプリに適用"
+  },
+  "Applies when [“Remove filler words”](leise-settings://dictation/filler-words) is on under Dictation.": {
+    "de": "Gilt, wenn unter „Diktat“ [„Füllwörter entfernen“](leise-settings://dictation/filler-words) eingeschaltet ist.",
+    "ja": "「音声入力」の[「フィラーワードを削除」](leise-settings://dictation/filler-words)がオンのときに適用されます。"
+  },
+  "Area": {
+    "de": "Bereich",
+    "ja": "表示内容"
+  },
+  "As SRT": {
+    "de": "Als SRT",
+    "ja": "SRTとして"
+  },
+  "As VTT": {
+    "de": "Als VTT",
+    "ja": "VTTとして"
+  },
+  "Audio": {
+    "de": "Audio",
+    "ja": "オーディオ"
+  },
+  "Backup microphones": {
+    "de": "Ersatzmikrofone",
+    "ja": "予備のマイク"
+  },
+  "By default the model stays in memory so dictation starts at once. With unloading, Leise loads it again when you start the next dictation.": {
+    "de": "Standardmäßig bleibt das Modell im Arbeitsspeicher, damit das Diktat sofort startet. Wird es entladen, lädt Leise es beim nächsten Diktat erneut.",
+    "ja": "通常は、すぐに音声入力を始められるようにモデルをメモリに残します。解放すると、次の音声入力を始めるときにLeiseがもう一度読み込みます。"
+  },
+  "Changes": {
+    "de": "Änderungen",
+    "ja": "変更点"
+  },
+  "Change…": {
+    "de": "Ändern …",
+    "ja": "変更…"
+  },
+  "Check Now": {
+    "de": "Jetzt suchen",
+    "ja": "今すぐ確認"
+  },
+  "Check for updates": {
+    "de": "Nach Updates suchen",
+    "ja": "アップデートを確認"
+  },
+  "Choose": {
+    "de": "Auswählen",
+    "ja": "選択"
+  },
+  "Choose File…": {
+    "de": "Datei auswählen …",
+    "ja": "ファイルを選択…"
+  },
+  "Choose a dictation on the left to read, copy or edit it.": {
+    "de": "Wähle links ein Diktat, um es zu lesen, zu kopieren oder zu bearbeiten.",
+    "ja": "左の音声入力を選ぶと、読む・コピーする・編集することができます。"
+  },
+  "Choose a sound file": {
+    "de": "Tondatei auswählen",
+    "ja": "サウンドファイルを選択"
+  },
+  "Clear All": {
+    "de": "Alle löschen",
+    "ja": "すべて消去"
+  },
+  "Clear List": {
+    "de": "Liste leeren",
+    "ja": "リストを消去"
+  },
+  "Clear Log…": {
+    "de": "Protokoll löschen …",
+    "ja": "ログを消去…"
+  },
+  "Compared with typing, that saved you about **%@**.": {
+    "de": "Gegenüber dem Tippen hat dir das rund **%@** gespart.",
+    "ja": "タイピングと比べて、約**%@**の節約になりました。"
+  },
+  "Contains settings, dictionary, app rules and history. Downloaded models, audio recordings and your own sounds are not included.": {
+    "de": "Enthält Einstellungen, Wörterbuch, App-Regeln und Verlauf. Geladene Modelle, Audioaufnahmen und eigene Töne sind nicht enthalten.",
+    "ja": "設定、辞書、アプリのルール、履歴を含みます。ダウンロードしたモデル、録音、独自のサウンドは含まれません。"
+  },
+  "Copied": {
+    "de": "Kopiert",
+    "ja": "コピーしました"
+  },
+  "Copies your latest transcription to the clipboard.": {
+    "de": "Kopiert deine letzte Transkription in die Zwischenablage.",
+    "ja": "最新の文字起こしをクリップボードにコピーします。"
+  },
+  "Copy last transcription": {
+    "de": "Letzte Transkription kopieren",
+    "ja": "最新の文字起こしをコピー"
+  },
+  "Copy, export or delete them together.": {
+    "de": "Kopiere, exportiere oder lösche sie gemeinsam.",
+    "ja": "まとめてコピー、書き出し、削除ができます。"
+  },
+  "Corrections replace text after transcription.": {
+    "de": "Korrekturen ersetzen Text nach der Transkription.",
+    "ja": "修正は、文字起こしの後にテキストを置き換えます。"
+  },
+  "Could not load": {
+    "de": "Konnte nicht geladen werden",
+    "ja": "読み込めませんでした"
+  },
+  "Create transcript": {
+    "de": "Transkript erstellen",
+    "ja": "文字起こしを作成"
+  },
+  "Custom Sound…": {
+    "de": "Eigener Ton …",
+    "ja": "カスタムサウンド…"
+  },
+  "Daily": {
+    "de": "Täglich",
+    "ja": "日別"
+  },
+  "Data": {
+    "de": "Daten",
+    "ja": "データ"
+  },
+  "Debug Actions": {
+    "de": "Debug-Aktionen",
+    "ja": "デバッグ操作"
+  },
+  "Delete All Entries…": {
+    "de": "Alle Einträge löschen …",
+    "ja": "すべての項目を削除…"
+  },
+  "Delete Automatically": {
+    "de": "Automatisch löschen",
+    "ja": "自動的に削除"
+  },
+  "Delete Rule": {
+    "de": "Regel löschen",
+    "ja": "ルールを削除"
+  },
+  "Delete Rule…": {
+    "de": "Regel löschen …",
+    "ja": "ルールを削除…"
+  },
+  "Delete Usage Data…": {
+    "de": "Nutzungsdaten löschen …",
+    "ja": "使用状況データを削除…"
+  },
+  "Delete Visible Entries…": {
+    "de": "Angezeigte Einträge löschen …",
+    "ja": "表示中の項目を削除…"
+  },
+  "Delete “%@”?": {
+    "de": "„%@“ löschen?",
+    "ja": "「%@」を削除しますか？"
+  },
+  "Diagnostics": {
+    "de": "Diagnose",
+    "ja": "診断"
+  },
+  "Dictate into any app. Your dictations appear here so you can copy or fix them later.": {
+    "de": "Diktiere in eine beliebige App. Deine Diktate erscheinen hier, damit du sie später kopieren oder korrigieren kannst.",
+    "ja": "どのアプリにも音声入力できます。入力した内容はここに表示され、あとからコピーや修正ができます。"
+  },
+  "Dictate these phrases into any text field (%@). If the result already matches, the model is enough. Otherwise use Leise’s rules.": {
+    "de": "Diktiere diese Sätze in ein beliebiges Textfeld (%@). Stimmt das Ergebnis schon, reicht das Modell. Sonst nutze die Regeln von Leise.",
+    "ja": "これらの文を任意のテキストフィールドに音声入力してください（%@）。結果がすでに一致していれば、モデルだけで十分です。そうでなければLeiseのルールを使ってください。"
+  },
+  "Dictated text": {
+    "de": "Diktierter Text",
+    "ja": "音声入力したテキスト"
+  },
+  "Dictating with this shortcut always uses this rule, whichever app is in front.": {
+    "de": "Diktate mit diesem Tastenkürzel nutzen immer diese Regel, egal welche App vorne ist.",
+    "ja": "このショートカットで音声入力すると、手前のアプリに関係なく常にこのルールが使われます。"
+  },
+  "Dictation": {
+    "de": "Diktat",
+    "ja": "音声入力"
+  },
+  "Dictation Recovery": {
+    "de": "Diktat-Wiederherstellung",
+    "ja": "音声入力の復元"
+  },
+  "Dictation in this app then uses your normal settings again.": {
+    "de": "Diktate in dieser App nutzen danach wieder deine normalen Einstellungen.",
+    "ja": "このアプリでの音声入力には、通常の設定がふたたび使われます。"
+  },
+  "Discard This Recording?": {
+    "de": "Diese Aufnahme verwerfen?",
+    "ja": "この録音を破棄しますか？"
+  },
+  "Discard very short or quiet recordings": {
+    "de": "Sehr kurze oder leise Aufnahmen verwerfen",
+    "ja": "ごく短い録音や音の小さい録音を破棄"
+  },
+  "Discard…": {
+    "de": "Verwerfen …",
+    "ja": "破棄…"
+  },
+  "Drop an audio or video file here": {
+    "de": "Audio- oder Videodatei hierher ziehen",
+    "ja": "ここにオーディオまたはビデオファイルをドロップ"
+  },
+  "Drop zone for audio and video files": {
+    "de": "Ablagebereich für Audio- und Videodateien",
+    "ja": "オーディオファイルとビデオファイルのドロップ領域"
+  },
+  "Edit Filler Words…": {
+    "de": "Füllwörter bearbeiten …",
+    "ja": "フィラーワードを編集…"
+  },
+  "Edit “%@”": {
+    "de": "„%@“ bearbeiten",
+    "ja": "「%@」を編集"
+  },
+  "Edited": {
+    "de": "Bearbeitet",
+    "ja": "編集済み"
+  },
+  "Edit…": {
+    "de": "Bearbeiten …",
+    "ja": "編集…"
+  },
+  "English only, 440 MB": {
+    "de": "Nur Englisch, 440 MB",
+    "ja": "英語のみ、440 MB"
+  },
+  "Error log": {
+    "de": "Fehlerprotokoll",
+    "ja": "エラーログ"
+  },
+  "Everything stays on this Mac": {
+    "de": "Alles bleibt auf diesem Mac",
+    "ja": "すべてこのMac内にとどまります"
+  },
+  "Expanded": {
+    "de": "Ausgeklappt",
+    "ja": "展開"
+  },
+  "Export": {
+    "de": "Exportieren",
+    "ja": "書き出す"
+  },
+  "Export %lld Entries": {
+    "de": "%lld Einträge exportieren",
+    "ja": "%lld件を書き出す"
+  },
+  "Export Dictionary…": {
+    "de": "Wörterbuch exportieren …",
+    "ja": "辞書を書き出す…"
+  },
+  "Export backup": {
+    "de": "Sicherung exportieren",
+    "ja": "バックアップを書き出す"
+  },
+  "Export diagnostics": {
+    "de": "Diagnose exportieren",
+    "ja": "診断情報を書き出す"
+  },
+  "Export…": {
+    "de": "Exportieren …",
+    "ja": "書き出す…"
+  },
+  "File": {
+    "de": "Datei",
+    "ja": "ファイル"
+  },
+  "Files": {
+    "de": "Dateien",
+    "ja": "ファイル"
+  },
+  "Filler word list": {
+    "de": "Füllwortliste",
+    "ja": "フィラーワードのリスト"
+  },
+  "Filler words: %@": {
+    "de": "Füllwörter: %@",
+    "ja": "フィラーワード：%@"
+  },
+  "Filter History": {
+    "de": "Verlauf filtern",
+    "ja": "履歴を絞り込む"
+  },
+  "Filter: %@": {
+    "de": "Filter: %@",
+    "ja": "フィルタ：%@"
+  },
+  "Fine-Tuning": {
+    "de": "Feinabstimmung",
+    "ja": "微調整"
+  },
+  "For %@": {
+    "de": "Für %@",
+    "ja": "%@向け"
+  },
+  "For bug reports.": {
+    "de": "Für Fehlerberichte.",
+    "ja": "不具合の報告用です。"
+  },
+  "For calls: also records the other participants.": {
+    "de": "Für Anrufe: nimmt auch die anderen Teilnehmenden auf.",
+    "ja": "通話用：ほかの参加者の声も録音します。"
+  },
+  "For example: always English in Xcode, or press Return after inserting in Messages.": {
+    "de": "Zum Beispiel: in Xcode immer Englisch, oder in Nachrichten nach dem Einfügen Return drücken.",
+    "ja": "例：Xcodeでは常に英語にする、メッセージでは挿入後にReturnキーを押す。"
+  },
+  "Format": {
+    "de": "Format",
+    "ja": "形式"
+  },
+  "Formatting that fits the target app": {
+    "de": "Formatierung passend zur Ziel-App",
+    "ja": "入力先のアプリに合わせた書式"
+  },
+  "Helps with names and special words.": {
+    "de": "Hilft bei Namen und besonderen Wörtern.",
+    "ja": "名前や特殊な単語の認識に役立ちます。"
+  },
+  "Hide": {
+    "de": "Ausblenden",
+    "ja": "隠す"
+  },
+  "Hide Tip": {
+    "de": "Tipp ausblenden",
+    "ja": "ヒントを隠す"
+  },
+  "History Is Off": {
+    "de": "Verlauf ist aus",
+    "ja": "履歴はオフです"
+  },
+  "History off": {
+    "de": "Verlauf aus",
+    "ja": "履歴オフ"
+  },
+  "History retention": {
+    "de": "Aufbewahrung des Verlaufs",
+    "ja": "履歴の保存"
+  },
+  "History retention: %@": {
+    "de": "Aufbewahrung des Verlaufs: %@",
+    "ja": "履歴の保存：%@"
+  },
+  "Hold **%@** in any app and speak. Your first dictation appears here.": {
+    "de": "Halte in einer beliebigen App **%@** gedrückt und sprich. Dein erstes Diktat erscheint hier.",
+    "ja": "どのアプリでも**%@**を押したまま話してください。最初の音声入力がここに表示されます。"
+  },
+  "Hold only (push-to-talk)": {
+    "de": "Nur halten (Push-to-Talk)",
+    "ja": "長押しのみ（プッシュトゥトーク）"
+  },
+  "Hold: speak as long as you hold. Tap: starts and stops.": {
+    "de": "Halten: sprechen, solange du hältst. Tippen: startet und stoppt.",
+    "ja": "長押し：押している間だけ話せます。タップ：開始と停止を切り替えます。"
+  },
+  "If a microphone goes away, Leise takes the next one on the list.": {
+    "de": "Fällt ein Mikrofon weg, nimmt Leise das nächste auf der Liste.",
+    "ja": "マイクが使えなくなると、Leiseはリストの次のマイクを使います。"
+  },
+  "Import Dictionary…": {
+    "de": "Wörterbuch importieren …",
+    "ja": "辞書を読み込む…"
+  },
+  "Import backup": {
+    "de": "Sicherung importieren",
+    "ja": "バックアップを読み込む"
+  },
+  "Import…": {
+    "de": "Importieren …",
+    "ja": "読み込む…"
+  },
+  "In the Dock only while a window is open": {
+    "de": "Im Dock nur, solange ein Fenster offen ist",
+    "ja": "ウインドウが開いているときだけDockに表示"
+  },
+  "Indicator style": {
+    "de": "Indikator-Stil",
+    "ja": "インジケーターのスタイル"
+  },
+  "Input": {
+    "de": "Eingang",
+    "ja": "入力"
+  },
+  "Input level": {
+    "de": "Eingangspegel",
+    "ja": "入力レベル"
+  },
+  "Insertion": {
+    "de": "Einfügen",
+    "ja": "挿入"
+  },
+  "Keep %lld days": {
+    "de": "%lld Tage behalten",
+    "ja": "%lld日間保存"
+  },
+  "Keep forever": {
+    "de": "Für immer behalten",
+    "ja": "無期限に保存"
+  },
+  "Keeps the model’s punctuation and only turns spoken commands it left as words into marks.": {
+    "de": "Behält die Satzzeichen des Modells und wandelt nur gesprochene Befehle, die es als Wörter stehen ließ, in Zeichen um.",
+    "ja": "モデルの句読点はそのまま残し、単語のまま残った音声コマンドだけを記号に変換します。"
+  },
+  "Keyboard Shortcuts": {
+    "de": "Tastenkürzel",
+    "ja": "キーボードショートカット"
+  },
+  "Keyboard shortcut": {
+    "de": "Tastenkürzel",
+    "ja": "キーボードショートカット"
+  },
+  "Kind": {
+    "de": "Art",
+    "ja": "種類"
+  },
+  "Language & Model": {
+    "de": "Sprache & Modell",
+    "ja": "言語とモデル"
+  },
+  "Language: %@": {
+    "de": "Sprache: %@",
+    "ja": "言語：%@"
+  },
+  "Language: detect automatically": {
+    "de": "Sprache: automatisch erkennen",
+    "ja": "言語：自動検出"
+  },
+  "Last attempt: %@": {
+    "de": "Letzter Versuch: %@",
+    "ja": "前回の試行：%@"
+  },
+  "Leise %@, local, no account": {
+    "de": "Leise %@, lokal, ohne Konto",
+    "ja": "Leise %@、ローカル、アカウント不要"
+  },
+  "Leise (Default)": {
+    "de": "Leise (Standard)",
+    "ja": "Leise（デフォルト）"
+  },
+  "Leise counts dictations locally on this Mac. Statistics appear after your first dictation.": {
+    "de": "Leise zählt Diktate lokal auf diesem Mac. Statistiken erscheinen nach deinem ersten Diktat.",
+    "ja": "Leiseは音声入力をこのMac上だけで集計します。統計は最初の音声入力の後に表示されます。"
+  },
+  "Leise forgets dictations once they are inserted.": {
+    "de": "Leise vergisst Diktate, sobald sie eingefügt sind.",
+    "ja": "Leiseは、挿入した音声入力を保存しません。"
+  },
+  "Leise prefers terms while recognizing when “Prefer terms when recognizing” is on.": {
+    "de": "Leise bevorzugt Begriffe beim Erkennen, wenn „Begriffe beim Erkennen bevorzugen“ eingeschaltet ist.",
+    "ja": "「認識時に用語を優先」がオンのとき、Leiseは認識中に用語を優先します。"
+  },
+  "Leise replaces these spellings after every dictation.": {
+    "de": "Leise ersetzt diese Schreibweisen nach jedem Diktat.",
+    "ja": "Leiseは音声入力のたびにこれらの表記を置き換えます。"
+  },
+  "Leise rules only": {
+    "de": "Nur Leise-Regeln",
+    "ja": "Leiseのルールのみ"
+  },
+  "Leise then shows no icon at all until you open it. To open it again, launch Leise from Spotlight or the Applications folder.": {
+    "de": "Leise zeigt dann gar kein Symbol, bis du es öffnest. Um es wieder zu öffnen, starte Leise über Spotlight oder den Ordner „Programme“.",
+    "ja": "Leiseを開くまで、アイコンはまったく表示されません。もう一度開くには、Spotlightまたは「アプリケーション」フォルダからLeiseを起動してください。"
+  },
+  "Leise uses the target app’s rules and the text around the cursor. An app rule’s output format still decides the format for that app.": {
+    "de": "Leise berücksichtigt die Regeln der Ziel-App und den Text um den Cursor. Das Ausgabeformat einer App-Regel bestimmt für diese App weiterhin das Format.",
+    "ja": "Leiseは入力先アプリのルールとカーソル周辺のテキストを考慮します。アプリのルールで出力形式を指定している場合は、そのアプリではその形式が優先されます。"
+  },
+  "Leise weights these words more strongly while recognizing. A small extra model loads once for this.": {
+    "de": "Leise gewichtet diese Wörter beim Erkennen stärker. Dafür wird einmalig ein kleines Zusatzmodell geladen.",
+    "ja": "Leiseは認識時にこれらの単語を優先します。そのために小さな追加モデルを一度だけ読み込みます。"
+  },
+  "Level": {
+    "de": "Pegel",
+    "ja": "レベル"
+  },
+  "Like the default · click to adjust": {
+    "de": "Wie der Standard · zum Anpassen klicken",
+    "ja": "デフォルトと同じ · クリックして調整"
+  },
+  "Listen to “%@”": {
+    "de": "„%@“ anhören",
+    "ja": "「%@」を試聴"
+  },
+  "Live transcript while recording": {
+    "de": "Live-Transkript während der Aufnahme",
+    "ja": "録音中にリアルタイムで文字起こし"
+  },
+  "Load": {
+    "de": "Laden",
+    "ja": "読み込む"
+  },
+  "Load a speech model to set up spoken punctuation.": {
+    "de": "Lade ein Sprachmodell, um gesprochene Satzzeichen einzurichten.",
+    "ja": "句読点の音声入力を設定するには、音声認識モデルを読み込んでください。"
+  },
+  "Loading more packs…": {
+    "de": "Weitere Pakete werden geladen …",
+    "ja": "ほかのパックを読み込み中…"
+  },
+  "Loading…": {
+    "de": "Wird geladen …",
+    "ja": "読み込み中…"
+  },
+  "Loading… %@": {
+    "de": "Wird geladen … %@",
+    "ja": "読み込み中… %@"
+  },
+  "Loads the model now, downloading it once if needed.": {
+    "de": "Lädt das Modell jetzt und lädt es bei Bedarf einmalig herunter.",
+    "ja": "モデルを今すぐ読み込みます。必要な場合は一度だけダウンロードします。"
+  },
+  "Local, no account": {
+    "de": "Lokal, ohne Konto",
+    "ja": "ローカル、アカウント不要"
+  },
+  "Lower other apps": {
+    "de": "Andere Apps leiser stellen",
+    "ja": "ほかのアプリの音量を下げる"
+  },
+  "MP3, M4A, WAV, MP4 and more": {
+    "de": "MP3, M4A, WAV, MP4 und mehr",
+    "ja": "MP3、M4A、WAV、MP4など"
+  },
+  "Media": {
+    "de": "Medien",
+    "ja": "メディア"
+  },
+  "Menu bar icon": {
+    "de": "Symbol in der Menüleiste",
+    "ja": "メニューバーのアイコン"
+  },
+  "Microphone disconnected. Leise uses the system default for now.": {
+    "de": "Mikrofon getrennt. Leise nutzt vorerst den Systemstandard.",
+    "ja": "マイクが切断されました。当面はシステム標準のマイクを使います。"
+  },
+  "Microphone off": {
+    "de": "Mikrofon aus",
+    "ja": "マイクはオフ"
+  },
+  "Microphone on": {
+    "de": "Mikrofon an",
+    "ja": "マイクはオン"
+  },
+  "Model only": {
+    "de": "Nur Modell",
+    "ja": "モデルのみ"
+  },
+  "Models": {
+    "de": "Modelle",
+    "ja": "モデル"
+  },
+  "More Packs": {
+    "de": "Weitere Pakete",
+    "ja": "その他のパック"
+  },
+  "More about %@": {
+    "de": "Mehr zu „%@“",
+    "ja": "「%@」の詳細"
+  },
+  "More packs could not be loaded.": {
+    "de": "Weitere Pakete konnten nicht geladen werden.",
+    "ja": "ほかのパックを読み込めませんでした。"
+  },
+  "More shortcuts": {
+    "de": "Weitere Tastenkürzel",
+    "ja": "その他のショートカット"
+  },
+  "Multilingual, 25 languages, 460 MB": {
+    "de": "Mehrsprachig, 25 Sprachen, 460 MB",
+    "ja": "多言語対応、25言語、460 MB"
+  },
+  "New Term": {
+    "de": "Neuer Begriff",
+    "ja": "新しい用語"
+  },
+  "New dictations aren’t saved.": {
+    "de": "Neue Diktate werden nicht gespeichert.",
+    "ja": "新しい音声入力は保存されません。"
+  },
+  "No Entry Selected": {
+    "de": "Kein Eintrag ausgewählt",
+    "ja": "項目が選択されていません"
+  },
+  "No History Yet": {
+    "de": "Noch kein Verlauf",
+    "ja": "履歴はまだありません"
+  },
+  "No Matches": {
+    "de": "Keine Treffer",
+    "ja": "一致する項目はありません"
+  },
+  "No Sound": {
+    "de": "Kein Ton",
+    "ja": "サウンドなし"
+  },
+  "No access: Leise can’t hear you": {
+    "de": "Kein Zugriff: Leise kann dich nicht hören",
+    "ja": "アクセスなし：Leiseは声を聞き取れません"
+  },
+  "No access: Leise can’t insert text": {
+    "de": "Kein Zugriff: Leise kann keinen Text einfügen",
+    "ja": "アクセスなし：Leiseはテキストを挿入できません"
+  },
+  "No corrections yet": {
+    "de": "Noch keine Korrekturen",
+    "ja": "修正はまだありません"
+  },
+  "No entry matches the search or filter.": {
+    "de": "Kein Eintrag passt zur Suche oder zum Filter.",
+    "ja": "検索またはフィルタに一致する項目はありません。"
+  },
+  "No filler words. Leise leaves your text as it is.": {
+    "de": "Keine Füllwörter. Leise lässt deinen Text, wie er ist.",
+    "ja": "フィラーワードはありません。Leiseはテキストをそのまま残します。"
+  },
+  "No microphone connected. Connect one to choose or test it.": {
+    "de": "Kein Mikrofon angeschlossen. Schließe eins an, um es auszuwählen oder zu testen.",
+    "ja": "マイクが接続されていません。接続すると、選択やテストができます。"
+  },
+  "No more packs available yet.": {
+    "de": "Noch keine weiteren Pakete verfügbar.",
+    "ja": "ほかに利用できるパックはまだありません。"
+  },
+  "No recordings yet. The red button above starts one, or press %@ in any app.": {
+    "de": "Noch keine Aufnahmen. Der rote Knopf oben startet eine, oder drücke %@ in einer beliebigen App.",
+    "ja": "録音はまだありません。上の赤いボタンを押すか、どのアプリでも%@を押すと録音が始まります。"
+  },
+  "No recordings yet. The red button above starts one.": {
+    "de": "Noch keine Aufnahmen. Der rote Knopf oben startet eine.",
+    "ja": "録音はまだありません。上の赤いボタンを押すと録音が始まります。"
+  },
+  "No results for “%@”.": {
+    "de": "Keine Treffer für „%@“.",
+    "ja": "「%@」に一致する結果はありません。"
+  },
+  "No rules yet": {
+    "de": "Noch keine Regeln",
+    "ja": "ルールはまだありません"
+  },
+  "No speech model available": {
+    "de": "Kein Sprachmodell verfügbar",
+    "ja": "利用できる音声認識モデルがありません"
+  },
+  "No speech recognized": {
+    "de": "Keine Sprache erkannt",
+    "ja": "音声を認識できませんでした"
+  },
+  "No terms yet": {
+    "de": "Noch keine Begriffe",
+    "ja": "用語はまだありません"
+  },
+  "No usage data yet": {
+    "de": "Noch keine Nutzungsdaten",
+    "ja": "使用状況データはまだありません"
+  },
+  "Not loaded": {
+    "de": "Nicht geladen",
+    "ja": "未読み込み"
+  },
+  "Not set": {
+    "de": "Nicht festgelegt",
+    "ja": "未設定"
+  },
+  "Not transcribed": {
+    "de": "Nicht transkribiert",
+    "ja": "文字起こしされていません"
+  },
+  "Not transcribed: %lld": {
+    "de": "Nicht transkribiert: %lld",
+    "ja": "文字起こしされていない録音：%lld件"
+  },
+  "Numbers as digits": {
+    "de": "Zahlen als Ziffern",
+    "ja": "数字を算用数字で入力"
+  },
+  "Older": {
+    "de": "Älter",
+    "ja": "それ以前"
+  },
+  "On": {
+    "de": "Ein",
+    "ja": "オン"
+  },
+  "One domain per line": {
+    "de": "Eine Domain pro Zeile",
+    "ja": "1行に1つのドメイン"
+  },
+  "Open Again…": {
+    "de": "Erneut öffnen …",
+    "ja": "もう一度開く…"
+  },
+  "Open Apps": {
+    "de": "Geöffnete Apps",
+    "ja": "開いているアプリ"
+  },
+  "Open Dictation Settings": {
+    "de": "Diktateinstellungen öffnen",
+    "ja": "音声入力の設定を開く"
+  },
+  "Open Login Items…": {
+    "de": "Anmeldeobjekte öffnen …",
+    "ja": "ログイン項目を開く…"
+  },
+  "Open Recordings Folder": {
+    "de": "Aufnahmeordner öffnen",
+    "ja": "録音フォルダを開く"
+  },
+  "Open setup again": {
+    "de": "Einrichtung erneut öffnen",
+    "ja": "セットアップをもう一度開く"
+  },
+  "Opens the correction": {
+    "de": "Öffnet die Korrektur",
+    "ja": "修正を開きます"
+  },
+  "Opens the term": {
+    "de": "Öffnet den Begriff",
+    "ja": "用語を開きます"
+  },
+  "Original": {
+    "de": "Original",
+    "ja": "元のテキスト"
+  },
+  "Other App…": {
+    "de": "Andere App …",
+    "ja": "ほかのアプリ…"
+  },
+  "Own shortcut": {
+    "de": "Eigenes Tastenkürzel",
+    "ja": "専用のショートカット"
+  },
+  "Packs": {
+    "de": "Pakete",
+    "ja": "パック"
+  },
+  "Packs add ready-made term lists. You can remove them at any time.": {
+    "de": "Pakete fügen fertige Begriffslisten hinzu. Du kannst sie jederzeit entfernen.",
+    "ja": "パックを使うと、用意された用語リストを追加できます。いつでも削除できます。"
+  },
+  "Parakeet v2 (English only)": {
+    "de": "Parakeet v2 (nur Englisch)",
+    "ja": "Parakeet v2（英語のみ）"
+  },
+  "Pause music and videos": {
+    "de": "Musik und Videos pausieren",
+    "ja": "音楽とビデオを一時停止"
+  },
+  "Pauses music and videos while you dictate and resumes them afterwards. Uses the macOS media controls, which not every app supports.": {
+    "de": "Pausiert Musik und Videos während des Diktats und setzt sie danach fort. Nutzt die Mediensteuerung von macOS, die nicht jede App unterstützt.",
+    "ja": "音声入力中は音楽やビデオを一時停止し、終了後に再開します。macOSのメディアコントロールを使うため、対応していないアプリもあります。"
+  },
+  "Period": {
+    "de": "Zeitraum",
+    "ja": "期間"
+  },
+  "Plain Text (.txt)": {
+    "de": "Reiner Text (.txt)",
+    "ja": "プレーンテキスト (.txt)"
+  },
+  "Plain text": {
+    "de": "Reiner Text",
+    "ja": "プレーンテキスト"
+  },
+  "Play sounds": {
+    "de": "Töne abspielen",
+    "ja": "サウンドを再生"
+  },
+  "Post-processed": {
+    "de": "Nachbearbeitet",
+    "ja": "後処理あり"
+  },
+  "Prefer terms when recognizing": {
+    "de": "Begriffe beim Erkennen bevorzugen",
+    "ja": "認識時に用語を優先"
+  },
+  "Press Return after inserting": {
+    "de": "Nach dem Einfügen Return drücken",
+    "ja": "挿入後にReturnキーを押す"
+  },
+  "Press a key or mouse button…": {
+    "de": "Taste oder Maustaste drücken …",
+    "ja": "キーまたはマウスボタンを押す…"
+  },
+  "Press once to start, press again to stop.": {
+    "de": "Einmal drücken zum Starten, erneut drücken zum Stoppen.",
+    "ja": "1回押すと開始、もう一度押すと停止します。"
+  },
+  "Privacy": {
+    "de": "Datenschutz",
+    "ja": "プライバシー"
+  },
+  "Punctuation recognition": {
+    "de": "Erkennung von Satzzeichen",
+    "ja": "句読点の認識"
+  },
+  "Quality, corrections, models.": {
+    "de": "Qualität, Korrekturen, Modelle.",
+    "ja": "品質、修正、モデル。"
+  },
+  "Raises quiet voices automatically.": {
+    "de": "Hebt leise Stimmen automatisch an.",
+    "ja": "小さな声を自動的に大きくします。"
+  },
+  "Ready to transcribe": {
+    "de": "Bereit zum Transkribieren",
+    "ja": "文字起こしの準備ができました"
+  },
+  "Recent": {
+    "de": "Zuletzt",
+    "ja": "最近"
+  },
+  "Recent transcriptions": {
+    "de": "Letzte Transkriptionen",
+    "ja": "最近の文字起こし"
+  },
+  "Recognition": {
+    "de": "Erkennung",
+    "ja": "認識方法"
+  },
+  "Recognized as": {
+    "de": "Erkannt als",
+    "ja": "認識された表記"
+  },
+  "Record system audio": {
+    "de": "Systemaudio aufnehmen",
+    "ja": "システムオーディオを録音"
+  },
+  "Recording stopped": {
+    "de": "Aufnahme gestoppt",
+    "ja": "録音を停止しました"
+  },
+  "Recording time": {
+    "de": "Aufnahmedauer",
+    "ja": "録音時間"
+  },
+  "Recording transcribed": {
+    "de": "Aufnahme transkribiert",
+    "ja": "録音を文字起こししました"
+  },
+  "Remove filler words": {
+    "de": "Füllwörter entfernen",
+    "ja": "フィラーワードを削除"
+  },
+  "Replace with": {
+    "de": "Ersetzen durch",
+    "ja": "置き換え後"
+  },
+  "Replace “%@” with “%@”": {
+    "de": "„%1$@“ durch „%2$@“ ersetzen",
+    "ja": "「%1$@」を「%2$@」に置き換え"
+  },
+  "Restart Now": {
+    "de": "Jetzt neu starten",
+    "ja": "今すぐ再起動"
+  },
+  "Restore clipboard": {
+    "de": "Zwischenablage wiederherstellen",
+    "ja": "クリップボードを復元"
+  },
+  "Restored %lld settings, %lld dictionary entries, %lld profiles, and %lld history records. Quit and reopen Leise to apply every restored setting.": {
+    "de": "%1$lld Einstellungen, %2$lld Wörterbucheinträge, %3$lld Profile und %4$lld Verlaufseinträge wurden wiederhergestellt. Beende Leise und öffne es erneut, damit alle Einstellungen gelten.",
+    "ja": "%1$lld件の設定、%2$lld件の辞書エントリ、%3$lld件のプロファイル、%4$lld件の履歴を復元しました。復元したすべての設定を適用するには、Leiseを終了してもう一度開いてください。"
+  },
+  "Rule": {
+    "de": "Regel",
+    "ja": "ルール"
+  },
+  "Rules per app": {
+    "de": "Regeln pro App",
+    "ja": "アプリごとのルール"
+  },
+  "Runs entirely on this Mac. No audio leaves the device.": {
+    "de": "Läuft komplett auf diesem Mac. Kein Audio verlässt das Gerät.",
+    "ja": "すべてこのMac上で動作します。音声がデバイスの外に送られることはありません。"
+  },
+  "Same as Dictation": {
+    "de": "Wie beim Diktat",
+    "ja": "音声入力と同じ"
+  },
+  "Same as System (%@)": {
+    "de": "Wie das System (%@)",
+    "ja": "システムと同じ（%@）"
+  },
+  "Save audio with dictations": {
+    "de": "Audio mit Diktaten speichern",
+    "ja": "音声入力と一緒に音声を保存"
+  },
+  "Save location": {
+    "de": "Speicherort",
+    "ja": "保存先"
+  },
+  "Saves Leise’s data in one file.": {
+    "de": "Speichert die Daten von Leise in einer Datei.",
+    "ja": "Leiseのデータを1つのファイルに保存します。"
+  },
+  "Say “comma”, “period”, or “question mark”. Leise inserts the marks for you.": {
+    "de": "Sag „Komma“, „Punkt“ oder „Fragezeichen“. Leise setzt die Zeichen für dich.",
+    "ja": "「comma」「period」「question mark」のように話すと、Leiseが記号を入れます。"
+  },
+  "Search History": {
+    "de": "Verlauf durchsuchen",
+    "ja": "履歴を検索"
+  },
+  "Section": {
+    "de": "Bereich",
+    "ja": "セクション"
+  },
+  "Secure Input is on in %@": {
+    "de": "Sichere Eingabe ist in %@ aktiv",
+    "ja": "%@でセキュア入力がオンになっています"
+  },
+  "Set Up…": {
+    "de": "Einrichten …",
+    "ja": "設定…"
+  },
+  "Set a dictation shortcut, then speak into any app. Your first dictation appears here.": {
+    "de": "Lege ein Tastenkürzel zum Diktieren fest und sprich dann in eine beliebige App. Dein erstes Diktat erscheint hier.",
+    "ja": "音声入力のショートカットを設定してから、どのアプリでも話してください。最初の音声入力がここに表示されます。"
+  },
+  "Setup": {
+    "de": "Einrichtung",
+    "ja": "セットアップ"
+  },
+  "Set…": {
+    "de": "Festlegen …",
+    "ja": "設定…"
+  },
+  "Share of post-processed and unchanged dictations": {
+    "de": "Anteil nachbearbeiteter und unveränderter Diktate",
+    "ja": "後処理された音声入力と未変更の音声入力の割合"
+  },
+  "Shortcut %@": {
+    "de": "Tastenkürzel %@",
+    "ja": "ショートカット %@"
+  },
+  "Show in History": {
+    "de": "Im Verlauf zeigen",
+    "ja": "履歴で表示"
+  },
+  "Shows the recognized words while you record. Uses a lighter, faster pass; the saved transcript is made at the end.": {
+    "de": "Zeigt die erkannten Wörter schon während der Aufnahme. Nutzt dafür einen leichteren, schnelleren Durchgang; das gespeicherte Transkript entsteht am Ende.",
+    "ja": "録音中に認識した単語を表示します。軽量で高速な処理を使い、保存される文字起こしは最後に作成されます。"
+  },
+  "Shows your latest transcriptions. Return inserts one into the front app.": {
+    "de": "Zeigt deine letzten Transkriptionen. Return fügt eine in die vordere App ein.",
+    "ja": "最近の文字起こしを表示します。Returnキーで手前のアプリに挿入します。"
+  },
+  "Show…": {
+    "de": "Anzeigen …",
+    "ja": "表示…"
+  },
+  "Sounds": {
+    "de": "Töne",
+    "ja": "サウンド"
+  },
+  "Speak a few test sentences and see which setting fits.": {
+    "de": "Sprich ein paar Testsätze und sieh, welche Einstellung passt.",
+    "ja": "いくつかのテスト文を話して、合う設定を確かめましょう。"
+  },
+  "Speak while you hold the keys. Letting go ends the dictation.": {
+    "de": "Sprich, solange du die Tasten hältst. Loslassen beendet das Diktat.",
+    "ja": "キーを押している間に話します。離すと音声入力が終わります。"
+  },
+  "Speech model": {
+    "de": "Sprachmodell",
+    "ja": "音声認識モデル"
+  },
+  "Spoken Punctuation": {
+    "de": "Gesprochene Satzzeichen",
+    "ja": "句読点の音声入力"
+  },
+  "Spoken punctuation": {
+    "de": "Gesprochene Satzzeichen",
+    "ja": "句読点の音声入力"
+  },
+  "Start": {
+    "de": "Start",
+    "ja": "開始"
+  },
+  "Start Recording": {
+    "de": "Aufnahme starten",
+    "ja": "録音を開始"
+  },
+  "Start recording": {
+    "de": "Aufnahme starten",
+    "ja": "録音を開始"
+  },
+  "Starts and stops a recording under Transcribe.": {
+    "de": "Startet und stoppt eine Aufnahme unter „Transkribieren“.",
+    "ja": "「文字起こし」で録音を開始・停止します。"
+  },
+  "Status": {
+    "de": "Status",
+    "ja": "ステータス"
+  },
+  "Stop": {
+    "de": "Stoppen",
+    "ja": "停止"
+  },
+  "Stop Recording": {
+    "de": "Aufnahme stoppen",
+    "ja": "録音を停止"
+  },
+  "Stopped": {
+    "de": "Gestoppt",
+    "ja": "停止済み"
+  },
+  "System Sounds": {
+    "de": "Systemtöne",
+    "ja": "システムサウンド"
+  },
+  "Takes effect after Leise restarts.": {
+    "de": "Gilt nach einem Neustart von Leise.",
+    "ja": "Leiseの再起動後に反映されます。"
+  },
+  "Term Packs": {
+    "de": "Begriffspakete",
+    "ja": "用語パック"
+  },
+  "Term packs": {
+    "de": "Begriffspakete",
+    "ja": "用語パック"
+  },
+  "Terms are names and special words Leise should know, such as “Parakeet” or your colleagues’ names.": {
+    "de": "Begriffe sind Namen und besondere Wörter, die Leise kennen soll, etwa „Parakeet“ oder die Namen deiner Kolleginnen und Kollegen.",
+    "ja": "用語とは、「Parakeet」や同僚の名前など、Leiseに覚えてほしい名前や特殊な単語のことです。"
+  },
+  "Test": {
+    "de": "Testen",
+    "ja": "テスト"
+  },
+  "Test Spoken Punctuation": {
+    "de": "Gesprochene Satzzeichen testen",
+    "ja": "句読点の音声入力をテスト"
+  },
+  "Test level": {
+    "de": "Pegel testen",
+    "ja": "レベルをテスト"
+  },
+  "Tested: Leise’s rules are needed.": {
+    "de": "Getestet: Die Regeln von Leise werden gebraucht.",
+    "ja": "テスト済み：Leiseのルールが必要です。"
+  },
+  "Tested: the model sets the marks itself.": {
+    "de": "Getestet: Das Modell setzt die Zeichen selbst.",
+    "ja": "テスト済み：モデルが自分で記号を入れます。"
+  },
+  "Test…": {
+    "de": "Testen …",
+    "ja": "テスト…"
+  },
+  "Text": {
+    "de": "Text",
+    "ja": "テキスト"
+  },
+  "The Model Is Enough": {
+    "de": "Das Modell reicht",
+    "ja": "モデルで十分"
+  },
+  "The audio of this recording is deleted. This can’t be undone.": {
+    "de": "Das Audio dieser Aufnahme wird gelöscht. Das kann nicht rückgängig gemacht werden.",
+    "ja": "この録音の音声は削除されます。この操作は取り消せません。"
+  },
+  "The microphone is only on while testing.": {
+    "de": "Das Mikrofon ist nur während des Tests an.",
+    "ja": "マイクはテスト中だけオンになります。"
+  },
+  "The share of your current volume that other apps keep while you dictate. 0% mutes them.": {
+    "de": "Der Anteil deiner aktuellen Lautstärke, den andere Apps beim Diktieren behalten. Bei 0 % sind sie stumm.",
+    "ja": "音声入力中に、ほかのアプリが保つ現在の音量の割合です。0%にするとミュートになります。"
+  },
+  "There are no test phrases for this language yet.": {
+    "de": "Für diese Sprache gibt es noch keine Testsätze.",
+    "ja": "この言語のテスト文はまだありません。"
+  },
+  "This recording from %@ (%@) was not transcribed. The audio is safe.": {
+    "de": "Diese Aufnahme von %1$@ (%2$@) wurde nicht transkribiert. Das Audio ist sicher gespeichert.",
+    "ja": "%1$@（%2$@）の録音は文字起こしされていません。音声は保存されています。"
+  },
+  "This recording from %@ was not transcribed. The audio is safe.": {
+    "de": "Diese Aufnahme von %@ wurde nicht transkribiert. Das Audio ist sicher gespeichert.",
+    "ja": "%@の録音は文字起こしされていません。音声は保存されています。"
+  },
+  "This week you spoke **%@** words in **%@** dictations.": {
+    "de": "Diese Woche hast du **%1$@** Wörter in **%2$@** Diktaten gesprochen.",
+    "ja": "今週は**%2$@**回の音声入力で**%1$@**語を話しました。"
+  },
+  "This week you spoke **%@** words in **one** dictation.": {
+    "de": "Diese Woche hast du **%@** Wörter in **einem** Diktat gesprochen.",
+    "ja": "今週は**1**回の音声入力で**%@**語を話しました。"
+  },
+  "This week you spoke **one** word in **one** dictation.": {
+    "de": "Diese Woche hast du **ein** Wort in **einem** Diktat gesprochen.",
+    "ja": "今週は**1**回の音声入力で**1**語を話しました。"
+  },
+  "Toggle only": {
+    "de": "Nur Umschalten",
+    "ja": "切り替えのみ"
+  },
+  "Tracks": {
+    "de": "Spuren",
+    "ja": "トラック"
+  },
+  "Transcribe": {
+    "de": "Transkribieren",
+    "ja": "文字起こし"
+  },
+  "Transcribe Again": {
+    "de": "Erneut transkribieren",
+    "ja": "もう一度文字起こし"
+  },
+  "Transcribe All": {
+    "de": "Alle transkribieren",
+    "ja": "すべて文字起こし"
+  },
+  "Transcribe a file": {
+    "de": "Datei transkribieren",
+    "ja": "ファイルを文字起こし"
+  },
+  "Transcribing": {
+    "de": "Wird transkribiert",
+    "ja": "文字起こし中"
+  },
+  "Transcribing…": {
+    "de": "Wird transkribiert …",
+    "ja": "文字起こし中…"
+  },
+  "Transcript": {
+    "de": "Transkript",
+    "ja": "文字起こし"
+  },
+  "Try it out": {
+    "de": "Ausprobieren",
+    "ja": "試してみる"
+  },
+  "Turn Off": {
+    "de": "Ausschalten",
+    "ja": "オフにする"
+  },
+  "Turn On": {
+    "de": "Einschalten",
+    "ja": "オンにする"
+  },
+  "Turn On History": {
+    "de": "Verlauf einschalten",
+    "ja": "履歴をオンにする"
+  },
+  "Turn on the microphone or system audio to record.": {
+    "de": "Schalte das Mikrofon oder das Systemaudio ein, um aufzunehmen.",
+    "ja": "録音するには、マイクまたはシステムオーディオをオンにしてください。"
+  },
+  "Unload model": {
+    "de": "Modell entladen",
+    "ja": "モデルを解放"
+  },
+  "Update channel": {
+    "de": "Update-Kanal",
+    "ja": "アップデートチャンネル"
+  },
+  "Usage data": {
+    "de": "Nutzungsdaten",
+    "ja": "使用状況データ"
+  },
+  "Use %@": {
+    "de": "%@ verwenden",
+    "ja": "%@を使用"
+  },
+  "Use Leise Rules": {
+    "de": "Leise-Regeln verwenden",
+    "ja": "Leiseのルールを使用"
+  },
+  "Used for dictation and for app rules without their own language.": {
+    "de": "Gilt für Diktate und für App-Regeln ohne eigene Sprache.",
+    "ja": "音声入力と、言語を指定していないアプリのルールで使われます。"
+  },
+  "Uses the model’s text unchanged. Spoken commands stay words.": {
+    "de": "Übernimmt den Text des Modells unverändert. Gesprochene Befehle bleiben Wörter.",
+    "ja": "モデルのテキストをそのまま使います。音声コマンドは単語のまま残ります。"
+  },
+  "Volume while dictating": {
+    "de": "Lautstärke beim Diktieren",
+    "ja": "音声入力中の音量"
+  },
+  "Walks you through the first steps again. Your settings stay as they are.": {
+    "de": "Führt dich noch einmal durch die ersten Schritte. Deine Einstellungen bleiben, wie sie sind.",
+    "ja": "最初の手順をもう一度案内します。設定はそのまま保たれます。"
+  },
+  "Websites": {
+    "de": "Websites",
+    "ja": "Webサイト"
+  },
+  "Website…": {
+    "de": "Website …",
+    "ja": "Webサイト…"
+  },
+  "Week at a glance": {
+    "de": "Woche im Überblick",
+    "ja": "今週のまとめ"
+  },
+  "When off, Leise also transcribes very short or quiet recordings instead of treating them as silence. Accidental taps are always discarded.": {
+    "de": "Wenn aus, transkribiert Leise auch sehr kurze oder leise Aufnahmen, statt sie als Stille zu behandeln. Versehentliches Tippen wird immer verworfen.",
+    "ja": "オフにすると、ごく短い録音や音の小さい録音も無音として扱わずに文字起こしします。誤って押した場合は常に破棄されます。"
+  },
+  "While an app asks for a password, macOS blocks shortcuts that use only fn or modifier keys. Shortcuts with a regular key keep working.": {
+    "de": "Solange eine App nach einem Passwort fragt, blockiert macOS Tastenkürzel, die nur fn oder Sondertasten nutzen. Tastenkürzel mit einer normalen Taste funktionieren weiter.",
+    "ja": "アプリがパスワードを求めている間、macOSはfnキーや修飾キーだけのショートカットをブロックします。通常のキーを含むショートカットは引き続き使えます。"
+  },
+  "Whisper mode": {
+    "de": "Flüstermodus",
+    "ja": "ささやきモード"
+  },
+  "Without apps or websites, the rule applies to every app that has no rule of its own.": {
+    "de": "Ohne Apps oder Websites gilt die Regel für jede App, die keine eigene Regel hat.",
+    "ja": "アプリやWebサイトを指定しない場合、独自のルールがないすべてのアプリに適用されます。"
+  },
+  "Without the icon, Leise appears in the Dock.": {
+    "de": "Ohne Symbol erscheint Leise im Dock.",
+    "ja": "アイコンを表示しない場合、LeiseはDockに表示されます。"
+  },
+  "Words changed": {
+    "de": "Geänderte Wörter",
+    "ja": "変更された語数"
+  },
+  "Words like “comma” become punctuation marks. How Leise recognizes them is set under Advanced.": {
+    "de": "Wörter wie „Komma“ werden zu Satzzeichen. Wie Leise sie erkennt, legst du unter „Erweitert“ fest.",
+    "ja": "「comma」のような単語が句読点になります。認識方法は「詳細」で設定します。"
+  },
+  "Words per day": {
+    "de": "Wörter pro Tag",
+    "ja": "1日あたりの語数"
+  },
+  "Words you correct here are added to the dictionary as corrections.": {
+    "de": "Wörter, die du hier korrigierst, kommen als Korrekturen ins Wörterbuch.",
+    "ja": "ここで修正した単語は、修正として辞書に追加されます。"
+  },
+  "You haven’t dictated anything this week yet.": {
+    "de": "Diese Woche hast du noch nichts diktiert.",
+    "ja": "今週はまだ音声入力していません。"
+  },
+  "Your Sounds": {
+    "de": "Deine Töne",
+    "ja": "マイサウンド"
+  },
+  "Your latest dictations appear here, ready to copy again.": {
+    "de": "Deine letzten Diktate erscheinen hier, bereit zum erneuten Kopieren.",
+    "ja": "最近の音声入力がここに表示され、もう一度コピーできます。"
+  },
+  "Your own rules for single apps or websites. They apply as soon as the app is in front.": {
+    "de": "Eigene Regeln für einzelne Apps oder Websites. Sie gelten, sobald die App vorne ist.",
+    "ja": "個々のアプリやWebサイト用の独自ルールです。そのアプリが手前にあるときに適用されます。"
+  },
+  "agc gain quiet": {
+    "de": "agc verstärkung leise flüstern",
+    "ja": "agc ゲイン 小声 ささやき"
+  },
+  "backup import restore": {
+    "de": "sicherung backup importieren wiederherstellen",
+    "ja": "バックアップ 読み込み 復元"
+  },
+  "call meeting participants": {
+    "de": "anruf meeting besprechung teilnehmer systemaudio",
+    "ja": "通話 会議 参加者 システムオーディオ"
+  },
+  "clipboard paste": {
+    "de": "zwischenablage einfügen",
+    "ja": "クリップボード ペースト 貼り付け"
+  },
+  "comma period question mark": {
+    "de": "komma punkt fragezeichen satzzeichen",
+    "ja": "comma period 句読点 読点 句点 疑問符"
+  },
+  "comma period strategy test": {
+    "de": "komma punkt strategie erkennung testen",
+    "ja": "comma period 句読点 方式 テスト"
+  },
+  "dock icon": {
+    "de": "dock symbol icon menüleiste",
+    "ja": "dock アイコン メニューバー"
+  },
+  "ducking volume": {
+    "de": "ducking lautstärke leiser",
+    "ja": "ダッキング 音量"
+  },
+  "e.g. Kubernetes": {
+    "de": "z. B. Kubernetes",
+    "ja": "例: Kubernetes"
+  },
+  "e.g. kubernetees": {
+    "de": "z. B. kubernetees",
+    "ja": "例: kubernetees"
+  },
+  "english german japanese": {
+    "de": "englisch deutsch japanisch sprache",
+    "ja": "英語 ドイツ語 日本語 言語"
+  },
+  "errors log": {
+    "de": "fehler protokoll log",
+    "ja": "エラー ログ"
+  },
+  "failed not transcribed recording retry": {
+    "de": "fehlgeschlagen nicht transkribiert aufnahme erneut wiederherstellung",
+    "ja": "失敗 文字起こし 録音 再試行 復元"
+  },
+  "fallback microphone order": {
+    "de": "ersatz mikrofon reihenfolge",
+    "ja": "予備 マイク 順序"
+  },
+  "file import subtitles srt vtt": {
+    "de": "datei importieren untertitel srt vtt",
+    "ja": "ファイル 読み込み 字幕 srt vtt"
+  },
+  "folder format m4a wav": {
+    "de": "ordner format speicherort m4a wav",
+    "ja": "フォルダ 形式 保存先 m4a wav"
+  },
+  "formatting markdown": {
+    "de": "formatierung markdown",
+    "ja": "書式 フォーマット markdown"
+  },
+  "from %@": {
+    "de": "aus %@",
+    "ja": "%@から"
+  },
+  "german english spoken": {
+    "de": "deutsch englisch gesprochen sprache",
+    "ja": "ドイツ語 英語 話す 言語"
+  },
+  "hold to speak": {
+    "de": "halten zum Sprechen",
+    "ja": "長押しで話す"
+  },
+  "hotkey fn globe key hold tap": {
+    "de": "tastenkürzel hotkey fn globus taste halten tippen",
+    "ja": "ショートカット ホットキー fn 地球儀 キー 長押し タップ"
+  },
+  "hotkey push-to-talk toggle recorder": {
+    "de": "tastenkürzel hotkey push-to-talk umschalten rekorder",
+    "ja": "ショートカット ホットキー プッシュトゥトーク 切り替え レコーダー"
+  },
+  "input device": {
+    "de": "eingang gerät",
+    "ja": "入力 デバイス"
+  },
+  "keep delete days save audio": {
+    "de": "aufbewahren löschen tage speichern audio",
+    "ja": "保存 削除 日数 音声"
+  },
+  "learned": {
+    "de": "gelernt",
+    "ja": "学習済み"
+  },
+  "login startup": {
+    "de": "anmelden autostart start",
+    "ja": "ログイン 起動"
+  },
+  "media music": {
+    "de": "medien musik",
+    "ja": "メディア 音楽"
+  },
+  "memory": {
+    "de": "arbeitsspeicher speicher",
+    "ja": "メモリ"
+  },
+  "microphone test": {
+    "de": "mikrofon testen pegel",
+    "ja": "マイク テスト レベル"
+  },
+  "notch floating minimal live text": {
+    "de": "notch schwebend minimal live text anzeige",
+    "ja": "ノッチ フローティング ミニマル ライブ テキスト"
+  },
+  "numbers digits": {
+    "de": "zahlen ziffern",
+    "ja": "数字 数値"
+  },
+  "packs jargon developer": {
+    "de": "pakete fachbegriffe entwickler",
+    "ja": "パック 専門用語 開発者"
+  },
+  "parakeet engine download": {
+    "de": "parakeet engine herunterladen laden",
+    "ja": "parakeet エンジン ダウンロード"
+  },
+  "profiles websites per app": {
+    "de": "profile websites pro app regeln",
+    "ja": "プロファイル webサイト アプリごと ルール"
+  },
+  "recorder meeting call": {
+    "de": "rekorder aufnehmen meeting anruf besprechung",
+    "ja": "レコーダー 録音 会議 通話"
+  },
+  "recorder.emptyFinalTranscriptionError": {
+    "de": "Die finale Transkription hat keinen Text zurückgegeben.",
+    "ja": "最終の文字起こしでテキストが返されませんでした。"
+  },
+  "recorder.transcribe": {
+    "de": "Transkribieren",
+    "ja": "文字起こし"
+  },
+  "recorder.transcriptionFailureAlertSummary": {
+    "de": "Transkription fehlgeschlagen während %1$@: %2$@",
+    "ja": "%1$@中に文字起こしに失敗しました: %2$@"
+  },
+  "recorder.transcriptionFailureSummary": {
+    "de": "Transkription fehlgeschlagen für %1$@, %2$@ während %3$@: %4$@",
+    "ja": "文字起こしに失敗しました（長さ %1$@、サイズ %2$@、%3$@中）: %4$@"
+  },
+  "replace spelling": {
+    "de": "ersetzen schreibweise korrektur",
+    "ja": "置換 表記 修正"
+  },
+  "setup assistant onboarding": {
+    "de": "einrichtung assistent onboarding",
+    "ja": "セットアップ アシスタント 初期設定"
+  },
+  "short quiet no speech": {
+    "de": "kurz leise stille keine sprache",
+    "ja": "短い 小さい 無音"
+  },
+  "sound feedback": {
+    "de": "töne ton klang rückmeldung",
+    "ja": "サウンド 効果音 フィードバック"
+  },
+  "statistics dashboard quality": {
+    "de": "statistik dashboard qualität",
+    "ja": "統計 ダッシュボード 品質"
+  },
+  "statistics words dictations time saved": {
+    "de": "statistik wörter diktate zeit gespart",
+    "ja": "統計 単語 語数 音声入力 時間 節約"
+  },
+  "support report": {
+    "de": "support bericht fehlerbericht",
+    "ja": "サポート レポート"
+  },
+  "tap again for double-tap…": {
+    "de": "für Doppeltippen noch einmal drücken …",
+    "ja": "ダブルタップするにはもう一度押す…"
+  },
+  "twice": {
+    "de": "zweimal",
+    "ja": "2回"
+  },
+  "um uh filler cleanup": {
+    "de": "äh ähm füllwörter bereinigen",
+    "ja": "えー あのー フィラー 削除"
+  },
+  "um uh filler list edit": {
+    "de": "äh ähm füllwörter liste bearbeiten",
+    "ja": "えー あのー フィラー リスト 編集"
+  },
+  "um, uh, like … [The list is in the Dictionary.](leise-settings://dictionary/filler-words)": {
+    "de": "äh, ähm, also … [Die Liste steht im Wörterbuch.](leise-settings://dictionary/filler-words)",
+    "ja": "えー、あのー など… [リストは辞書にあります。](leise-settings://dictionary/filler-words)"
+  },
+  "updates beta": {
+    "de": "updates beta aktualisierung",
+    "ja": "アップデート ベータ"
+  },
+  "vocabulary boosting names": {
+    "de": "wortschatz vokabular bevorzugen boosting namen",
+    "ja": "語彙 ブースト 優先 名前"
+  },
+  "vocabulary names jargon": {
+    "de": "wortschatz vokabular namen fachbegriffe",
+    "ja": "語彙 名前 専門用語"
+  },
+  "“%@” active": {
+    "de": "„%@“ aktiv",
+    "ja": "「%@」を有効にする"
+  },
+  "“comma”, “period”, “question mark”": {
+    "de": "„Komma“, „Punkt“, „Fragezeichen“",
+    "ja": "「comma」「period」「question mark」"
+  },
+  "“forty-two” becomes 42": {
+    "de": "„zweiundvierzig“ wird zu 42",
+    "ja": "「forty-two」が「42」になります"
+  }
+}
