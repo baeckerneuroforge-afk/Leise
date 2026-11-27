@@ -1,0 +1,594 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-27T14:00:00Z",
+  "title": "Design System: Leise",
+  "extensions": {
+    "colorMeta": {
+      "tint": {
+        "role": "primary",
+        "displayName": "Petrol",
+        "canonical": "oklch(0.50 0.085 205)",
+        "hex": "#02717A",
+        "swiftUI": "Color.accentColor (Any)",
+        "tonalRamp": [
+          "oklch(0.15 0.022 205)",
+          "oklch(0.26 0.066 205)",
+          "oklch(0.37 0.079 205)",
+          "oklch(0.48 0.085 205)",
+          "oklch(0.60 0.082 205)",
+          "oklch(0.72 0.069 205)",
+          "oklch(0.84 0.035 205)",
+          "oklch(0.95 0.004 205)"
+        ]
+      },
+      "tint-dark": {
+        "role": "primary",
+        "displayName": "Petrol (Dark)",
+        "canonical": "oklch(0.78 0.09 198)",
+        "hex": "#6BC9CC",
+        "swiftUI": "Color.accentColor (Dark)",
+        "tonalRamp": [
+          "oklch(0.15 0.005 198)",
+          "oklch(0.26 0.011 198)",
+          "oklch(0.37 0.030 198)",
+          "oklch(0.48 0.058 198)",
+          "oklch(0.60 0.078 198)",
+          "oklch(0.72 0.089 198)",
+          "oklch(0.84 0.067 198)",
+          "oklch(0.95 0.016 198)"
+        ]
+      },
+      "tint-fill": {
+        "role": "primary",
+        "displayName": "Petrol Fill",
+        "canonical": "oklch(0.50 0.085 205)",
+        "hex": "#02717A",
+        "swiftUI": "Color.leiseTintFill (Any)",
+        "tonalRamp": [
+          "oklch(0.15 0.022 205)",
+          "oklch(0.26 0.066 205)",
+          "oklch(0.37 0.079 205)",
+          "oklch(0.48 0.085 205)",
+          "oklch(0.60 0.082 205)",
+          "oklch(0.72 0.069 205)",
+          "oklch(0.84 0.035 205)",
+          "oklch(0.95 0.004 205)"
+        ]
+      },
+      "tint-fill-dark": {
+        "role": "primary",
+        "displayName": "Petrol Fill (Dark)",
+        "canonical": "oklch(0.55 0.09 203)",
+        "hex": "#128189",
+        "swiftUI": "Color.leiseTintFill (Dark)",
+        "tonalRamp": [
+          "oklch(0.15 0.017 203)",
+          "oklch(0.26 0.060 203)",
+          "oklch(0.37 0.078 203)",
+          "oklch(0.48 0.088 203)",
+          "oklch(0.60 0.089 203)",
+          "oklch(0.72 0.080 203)",
+          "oklch(0.84 0.045 203)",
+          "oklch(0.95 0.007 203)"
+        ]
+      },
+      "on-tint": {
+        "role": "primary",
+        "displayName": "On Petrol",
+        "canonical": "oklch(0.99 0.004 205)",
+        "hex": "#F9FDFD",
+        "swiftUI": ".white on leiseTintFill"
+      },
+      "live": {
+        "role": "secondary",
+        "displayName": "Microphone Orange",
+        "canonical": "oklch(0.62 0.18 48)",
+        "hex": "#D85A00",
+        "swiftUI": "Color.leiseLive (Any)",
+        "tonalRamp": [
+          "oklch(0.15 0.010 55)",
+          "oklch(0.26 0.028 55)",
+          "oklch(0.37 0.088 55)",
+          "oklch(0.48 0.131 55)",
+          "oklch(0.60 0.160 55)",
+          "oklch(0.72 0.170 55)",
+          "oklch(0.84 0.120 55)",
+          "oklch(0.95 0.027 55)"
+        ]
+      },
+      "live-dark": {
+        "role": "secondary",
+        "displayName": "Microphone Orange (Dark)",
+        "canonical": "oklch(0.78 0.16 62)",
+        "hex": "#FF9D36",
+        "swiftUI": "Color.leiseLive (Dark)",
+        "tonalRamp": [
+          "oklch(0.15 0.010 62)",
+          "oklch(0.26 0.019 62)",
+          "oklch(0.37 0.054 62)",
+          "oklch(0.48 0.103 62)",
+          "oklch(0.60 0.140 62)",
+          "oklch(0.72 0.158 62)",
+          "oklch(0.84 0.118 62)",
+          "oklch(0.95 0.028 62)"
+        ]
+      },
+      "record": {
+        "role": "secondary",
+        "displayName": "Record Red",
+        "canonical": "oklch(0.58 0.19 27)",
+        "hex": "#D33B36",
+        "swiftUI": "Color.leiseRecord (Any)",
+        "tonalRamp": [
+          "oklch(0.15 0.026 27)",
+          "oklch(0.26 0.113 27)",
+          "oklch(0.37 0.157 27)",
+          "oklch(0.48 0.182 27)",
+          "oklch(0.60 0.190 27)",
+          "oklch(0.72 0.175 27)",
+          "oklch(0.84 0.104 27)",
+          "oklch(0.95 0.017 27)"
+        ]
+      },
+      "record-dark": {
+        "role": "secondary",
+        "displayName": "Record Red (Dark)",
+        "canonical": "oklch(0.74 0.16 27)",
+        "hex": "#FF7E72",
+        "swiftUI": "Color.leiseRecord (Dark)",
+        "tonalRamp": [
+          "oklch(0.15 0.011 27)",
+          "oklch(0.26 0.055 27)",
+          "oklch(0.37 0.112 27)",
+          "oklch(0.48 0.152 27)",
+          "oklch(0.60 0.175 27)",
+          "oklch(0.72 0.179 27)",
+          "oklch(0.84 0.121 27)",
+          "oklch(0.95 0.026 27)"
+        ]
+      },
+      "ready": {
+        "role": "secondary",
+        "displayName": "Ready Green",
+        "canonical": "oklch(0.60 0.14 152)",
+        "hex": "#2A9754",
+        "swiftUI": "Color.leiseReady (Any)",
+        "tonalRamp": [
+          "oklch(0.15 0.014 152)",
+          "oklch(0.26 0.076 152)",
+          "oklch(0.37 0.111 152)",
+          "oklch(0.48 0.132 152)",
+          "oklch(0.60 0.140 152)",
+          "oklch(0.72 0.132 152)",
+          "oklch(0.84 0.081 152)",
+          "oklch(0.95 0.014 152)"
+        ]
+      },
+      "ready-dark": {
+        "role": "secondary",
+        "displayName": "Ready Green (Dark)",
+        "canonical": "oklch(0.74 0.15 152)",
+        "hex": "#54C57A",
+        "swiftUI": "Color.leiseReady (Dark)",
+        "tonalRamp": [
+          "oklch(0.15 0.009 152)",
+          "oklch(0.26 0.018 152)",
+          "oklch(0.37 0.069 152)",
+          "oklch(0.48 0.110 152)",
+          "oklch(0.60 0.138 152)",
+          "oklch(0.72 0.150 152)",
+          "oklch(0.84 0.108 152)",
+          "oklch(0.95 0.025 152)"
+        ]
+      },
+      "label": {
+        "role": "neutral",
+        "displayName": "Label",
+        "canonical": "oklch(0.22 0.012 235)",
+        "hex": "#151C1F",
+        "swiftUI": ".primary / labelColor (system)",
+        "tonalRamp": [
+          "oklch(0.15 0.012 235)",
+          "oklch(0.26 0.012 235)",
+          "oklch(0.37 0.012 235)",
+          "oklch(0.48 0.012 235)",
+          "oklch(0.60 0.012 235)",
+          "oklch(0.72 0.012 235)",
+          "oklch(0.84 0.012 235)",
+          "oklch(0.95 0.012 235)"
+        ]
+      },
+      "label-dark": {
+        "role": "neutral",
+        "displayName": "Label (Dark)",
+        "canonical": "oklch(0.955 0.004 235)",
+        "hex": "#EEF1F2",
+        "swiftUI": ".primary / labelColor (system)"
+      },
+      "secondary-label": {
+        "role": "neutral",
+        "displayName": "Secondary Label",
+        "canonical": "oklch(0.44 0.012 235)",
+        "hex": "#4C5458",
+        "swiftUI": ".secondary / secondaryLabelColor (system)"
+      },
+      "secondary-label-dark": {
+        "role": "neutral",
+        "displayName": "Secondary Label (Dark)",
+        "canonical": "oklch(0.76 0.010 235)",
+        "hex": "#ABB2B7",
+        "swiftUI": ".secondary / secondaryLabelColor (system)"
+      },
+      "tertiary-label": {
+        "role": "neutral",
+        "displayName": "Tertiary Label",
+        "canonical": "oklch(0.50 0.010 235)",
+        "hex": "#5E6468",
+        "swiftUI": "tertiaryLabelColor (system)"
+      },
+      "tertiary-label-dark": {
+        "role": "neutral",
+        "displayName": "Tertiary Label (Dark)",
+        "canonical": "oklch(0.68 0.010 235)",
+        "hex": "#93999E",
+        "swiftUI": "tertiaryLabelColor (system)"
+      },
+      "window-background": {
+        "role": "neutral",
+        "displayName": "Window Background",
+        "canonical": "oklch(0.982 0.003 220)",
+        "hex": "#F7FAFA",
+        "swiftUI": "windowBackgroundColor (system)",
+        "tonalRamp": [
+          "oklch(0.15 0.004 220)",
+          "oklch(0.26 0.004 220)",
+          "oklch(0.37 0.004 220)",
+          "oklch(0.48 0.004 220)",
+          "oklch(0.60 0.004 220)",
+          "oklch(0.72 0.004 220)",
+          "oklch(0.84 0.004 220)",
+          "oklch(0.95 0.004 220)"
+        ]
+      },
+      "window-background-dark": {
+        "role": "neutral",
+        "displayName": "Window Background (Dark)",
+        "canonical": "oklch(0.205 0.006 235)",
+        "hex": "#15181A",
+        "swiftUI": "windowBackgroundColor (system)"
+      },
+      "group-background": {
+        "role": "neutral",
+        "displayName": "Group Background",
+        "canonical": "oklch(1 0 0)",
+        "hex": "#FFFFFF",
+        "swiftUI": "Form(.grouped) section background (system)"
+      },
+      "group-background-dark": {
+        "role": "neutral",
+        "displayName": "Group Background (Dark)",
+        "canonical": "oklch(0.25 0.007 235)",
+        "hex": "#1F2225",
+        "swiftUI": "Form(.grouped) section background (system)"
+      },
+      "control-background": {
+        "role": "neutral",
+        "displayName": "Control Background",
+        "canonical": "oklch(1 0 0)",
+        "hex": "#FFFFFF",
+        "swiftUI": "standard control (system)"
+      },
+      "control-background-dark": {
+        "role": "neutral",
+        "displayName": "Control Background (Dark)",
+        "canonical": "oklch(0.34 0.008 235)",
+        "hex": "#34393C",
+        "swiftUI": "standard control (system)"
+      },
+      "pill-black": {
+        "role": "neutral",
+        "displayName": "Pill Black",
+        "canonical": "#000000",
+        "hex": "#000000",
+        "swiftUI": "Color.black"
+      },
+      "pill-glass": {
+        "role": "neutral",
+        "displayName": "Pill Glass",
+        "canonical": "oklch(0.20 0.008 235 / 0.74)",
+        "hex": "#131719 @ 74%",
+        "swiftUI": ".glassEffect on macOS 26+, dark material on 14/15"
+      },
+      "pill-glass-dark": {
+        "role": "neutral",
+        "displayName": "Pill Glass (Dark)",
+        "canonical": "oklch(0.15 0.008 235 / 0.72)",
+        "hex": "#080C0E @ 72%",
+        "swiftUI": ".glassEffect on macOS 26+, dark material on 14/15"
+      }
+    },
+    "typographyMeta": {
+      "setup-title": {
+        "displayName": "Setup Title",
+        "purpose": "One headline per setup step.",
+        "swiftUI": ".largeTitle.bold() + .fontDesign(.rounded)"
+      },
+      "summary": {
+        "displayName": "Summary",
+        "purpose": "Overview sentence with counts.",
+        "swiftUI": ".title + .fontDesign(.rounded) + .monospacedDigit()"
+      },
+      "page-title": {
+        "displayName": "Page Title",
+        "purpose": "Settings page title in the toolbar.",
+        "swiftUI": ".title3.bold()"
+      },
+      "group-title": {
+        "displayName": "Group Title",
+        "purpose": "Header above a grouped form section.",
+        "swiftUI": ".headline"
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Row labels, menu and sidebar items, buttons.",
+        "swiftUI": ".body"
+      },
+      "secondary": {
+        "displayName": "Secondary",
+        "purpose": "Row subtitles, footnotes, metadata.",
+        "swiftUI": ".subheadline + .secondary"
+      },
+      "pill-time": {
+        "displayName": "Pill Time",
+        "purpose": "Elapsed time in the pill's leading ear.",
+        "swiftUI": ".caption.weight(.semibold) + .fontDesign(.rounded) + .monospacedDigit()"
+      }
+    },
+    "shadows": [
+      {
+        "name": "window",
+        "value": "0 32px 72px -24px oklch(0.25 0.04 225 / 0.38), 0 10px 24px -10px oklch(0.25 0.04 225 / 0.20), 0 0 0 0.5px oklch(0.20 0.02 230 / 0.20)",
+        "dark": "0 32px 72px -24px oklch(0 0 0 / 0.62), 0 10px 24px -10px oklch(0 0 0 / 0.42), 0 0 0 0.5px oklch(1 0 0 / 0.13)",
+        "purpose": "Windows only; system-provided in the app."
+      },
+      {
+        "name": "popover",
+        "value": "0 18px 40px -12px oklch(0.25 0.04 225 / 0.34), 0 2px 6px oklch(0.25 0.04 225 / 0.12), 0 0 0 0.5px oklch(0.20 0.02 230 / 0.18)",
+        "dark": "0 18px 40px -12px oklch(0 0 0 / 0.58), 0 0 0 0.5px oklch(1 0 0 / 0.13)",
+        "purpose": "Menus, popovers, the floating pill."
+      },
+      {
+        "name": "control",
+        "value": "0 0.5px 1.5px oklch(0.20 0.02 230 / 0.22)",
+        "dark": "0 0.5px 1px oklch(0 0 0 / 0.45)",
+        "purpose": "Lift under push buttons and segmented thumbs; system-provided."
+      }
+    ],
+    "motion": [
+      {
+        "name": "micro",
+        "value": "150ms cubic-bezier(0.22, 1, 0.36, 1)",
+        "swiftUI": ".easeOut(duration: 0.15)",
+        "purpose": "Hover and press."
+      },
+      {
+        "name": "ui",
+        "value": "200ms cubic-bezier(0.22, 1, 0.36, 1)",
+        "swiftUI": ".easeOut(duration: 0.2)",
+        "purpose": "Page switch, toggles, color changes."
+      },
+      {
+        "name": "shape",
+        "value": "280ms spring",
+        "swiftUI": ".spring(duration: 0.28, bounce: 0.12)",
+        "purpose": "Pill open and close, sidebar slide, setup step dots."
+      },
+      {
+        "name": "moment",
+        "value": "300ms spring",
+        "swiftUI": ".spring(duration: 0.3, bounce: 0.2)",
+        "purpose": "Success, counting numbers, week chart, mark entering in setup."
+      },
+      {
+        "name": "wave",
+        "value": "900ms cubic-bezier(0.65, 0, 0.35, 1) infinite, 90ms stagger",
+        "swiftUI": ".phaseAnimator",
+        "purpose": "Processing wave through the bars; only while transcribing."
+      },
+      {
+        "name": "check",
+        "value": "280ms ease-out after 100ms",
+        "swiftUI": ".symbolEffect(.drawOn) on macOS 26+",
+        "purpose": "Check or cross draws in the pill."
+      },
+      {
+        "name": "shake",
+        "value": "300ms, 4 beats",
+        "swiftUI": ".keyframeAnimator",
+        "purpose": "Error head shake on the pill."
+      },
+      {
+        "name": "reduce-motion",
+        "value": "200ms linear opacity",
+        "swiftUI": "accessibilityReduceMotion -> .opacity transition",
+        "purpose": "Replaces every animation above; loops and shake stop."
+      }
+    ],
+    "platform": {
+      "target": "macOS 14+",
+      "liquidGlass": "Standard components adopt Liquid Glass on macOS 26+",
+      "assetCatalogColors": [
+        "AccentColor",
+        "LeiseTintFill",
+        "LeiseLive",
+        "LeiseRecord",
+        "LeiseReady"
+      ],
+      "spacingSwiftUI": {
+        "xs": 4,
+        "s": 8,
+        "m": 12,
+        "l": 16,
+        "xl": 20,
+        "xxl": 24,
+        "xxxl": 32
+      },
+      "radiiSwiftUI": {
+        "control": 6,
+        "group": 10,
+        "panel": 14,
+        "window": 16
+      },
+      "leiseMarkHeights": [
+        0.55,
+        1,
+        0.72,
+        0.45,
+        0.26
+      ]
+    }
+  },
+  "components": [
+    {
+      "name": "LeiseMark",
+      "kind": "custom",
+      "refersTo": "tint",
+      "description": "Five bars, attack then fade: app icon, menu bar glyph and live waveform.",
+      "html": "<div class=\"ds-mark-row\"><span class=\"ds-mark\" aria-label=\"Leise\"><i style=\"--h:0.55\"></i><i style=\"--h:1\"></i><i style=\"--h:0.72\"></i><i style=\"--h:0.45\"></i><i style=\"--h:0.26\"></i></span><span class=\"ds-mark ds-mark-live\" aria-label=\"Leise hört zu\"><i style=\"--h:0.55\"></i><i style=\"--h:1\"></i><i style=\"--h:0.72\"></i><i style=\"--h:0.45\"></i><i style=\"--h:0.26\"></i></span></div>",
+      "css": ".ds-mark-row{display:flex;gap:24px;align-items:center}.ds-mark{--mh:40px;display:inline-flex;align-items:center;gap:calc(var(--mh)*0.13);height:var(--mh);color:oklch(0.50 0.085 205)}.ds-mark i{display:block;width:calc(var(--mh)*0.17);height:100%;border-radius:99px;background:currentColor;transform:scaleY(var(--h));transition:transform 200ms cubic-bezier(0.22,1,0.36,1)}.ds-mark-live{color:oklch(0.62 0.18 48)}.ds-mark:hover i{transform:scaleY(calc(var(--h)*0.8))}"
+    },
+    {
+      "name": "Indicator Pill (Notch, listening)",
+      "kind": "custom",
+      "refersTo": "indicator-pill-notch",
+      "description": "Black pill growing from the camera housing; orange bars mean the microphone is live.",
+      "html": "<div class=\"ds-pill\" role=\"status\"><span class=\"ds-pill-time\">0:04</span><span></span><span class=\"ds-pill-bars\"><i style=\"--h:0.55\"></i><i style=\"--h:1\"></i><i style=\"--h:0.72\"></i><i style=\"--h:0.45\"></i><i style=\"--h:0.26\"></i></span><span class=\"ds-pill-txt\">danke für das Gespräch heute</span></div>",
+      "css": ".ds-pill{display:grid;grid-template-columns:75px 196px 75px;grid-template-rows:32px 1fr;width:346px;height:74px;background:#000;color:oklch(0.97 0 0);border-radius:0 0 24px 24px;font-family:-apple-system,system-ui,sans-serif}.ds-pill-time{display:grid;place-items:center;font:600 12.5px/1 ui-rounded,-apple-system,system-ui,sans-serif;font-variant-numeric:tabular-nums;color:oklch(1 0 0 / 0.78)}.ds-pill-bars{display:flex;align-items:center;justify-content:center;gap:3px}.ds-pill-bars i{display:block;width:3px;height:17px;border-radius:2px;background:oklch(0.78 0.16 62);transform:scaleY(var(--h))}.ds-pill-txt{grid-column:1 / -1;align-self:center;text-align:center;padding:0 20px 2px;font:500 13px/1.25 -apple-system,system-ui,sans-serif;color:oklch(1 0 0 / 0.88);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}"
+    },
+    {
+      "name": "Indicator Pill (Float, done)",
+      "kind": "custom",
+      "refersTo": "indicator-pill-float",
+      "description": "Dark glass capsule; bars fold into a green check and the pill names the target app.",
+      "html": "<div class=\"ds-float\" role=\"status\"><span class=\"ds-float-app\"></span><span class=\"ds-float-txt\">In Mail eingefügt</span><svg class=\"ds-float-ok\" viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M5 12.5l4.5 4.5L19 7.5\"/></svg></div>",
+      "css": ".ds-float{display:grid;grid-template-columns:54px 1fr 58px;align-items:center;width:340px;height:44px;border-radius:22px;background:oklch(0.20 0.008 235 / 0.74);backdrop-filter:blur(24px) saturate(1.6);-webkit-backdrop-filter:blur(24px) saturate(1.6);box-shadow:0 18px 40px -12px oklch(0.25 0.04 225 / 0.34),inset 0 0 0 0.5px oklch(1 0 0 / 0.14)}.ds-float-app{justify-self:center;width:20px;height:20px;border-radius:6px;background:oklch(0.62 0.16 248)}.ds-float-txt{font:500 13px/1.25 -apple-system,system-ui,sans-serif;color:oklch(1 0 0 / 0.88);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.ds-float-ok{justify-self:center;width:22px;height:22px;fill:none;stroke:oklch(0.74 0.15 152);stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}"
+    },
+    {
+      "name": "Settings Group",
+      "kind": "card",
+      "refersTo": "settings-group",
+      "description": "Form(.grouped) section: toggle, popup and value rows with inset hairlines.",
+      "html": "<section class=\"ds-grp\"><h4 class=\"ds-grp-h\">Text</h4><div class=\"ds-grp-b\"><div class=\"ds-row\"><span class=\"ds-row-l\"><span>Füllwörter entfernen</span><small>äh, ähm, also … Die Liste steht im Wörterbuch.</small></span><label class=\"ds-switch\"><input type=\"checkbox\" role=\"switch\" checked aria-label=\"Füllwörter entfernen\"><span></span></label></div><div class=\"ds-row\"><span class=\"ds-row-l\"><span>Sprache</span></span><button class=\"ds-pop\">Deutsch</button></div><div class=\"ds-row\"><span class=\"ds-row-l\"><span>Sprachmodell</span></span><span class=\"ds-status\"><svg viewBox=\"0 0 16 16\" aria-hidden=\"true\"><circle cx=\"8\" cy=\"8\" r=\"7\"/><path d=\"M5 8.2l2 2 4-4.2\"/></svg>Parakeet v3 · bereit</span></div></div></section>",
+      "css": ".ds-grp{width:420px;font:400 13px/1.35 -apple-system,system-ui,sans-serif;color:oklch(0.22 0.012 235)}.ds-grp-h{font:600 13px/1.3 -apple-system,system-ui,sans-serif;margin:0 0 8px 4px}.ds-grp-b{background:#fff;border-radius:10px;box-shadow:0 0 0 1px oklch(0.22 0.012 235 / 0.075)}.ds-row{display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:40px;padding:8px 12px;position:relative}.ds-row+.ds-row::before{content:\"\";position:absolute;left:12px;right:0;top:0;height:1px;background:oklch(0.22 0.012 235 / 0.075)}.ds-row-l{display:flex;flex-direction:column;gap:2px}.ds-row-l small{font-size:11px;color:oklch(0.44 0.012 235)}.ds-switch{position:relative;width:32px;height:19px;flex:none}.ds-switch input{position:absolute;inset:0;margin:0;opacity:0;cursor:pointer}.ds-switch span{position:absolute;inset:0;border-radius:999px;background:oklch(0.22 0.012 235 / 0.16);transition:background-color 200ms cubic-bezier(0.22,1,0.36,1)}.ds-switch span::after{content:\"\";position:absolute;top:2px;left:2px;width:15px;height:15px;border-radius:50%;background:#fff;box-shadow:0 1px 2px oklch(0 0 0 / 0.28);transition:translate 320ms cubic-bezier(0.22,1,0.36,1)}.ds-switch input:checked+span{background:oklch(0.50 0.085 205)}.ds-switch input:checked+span::after{translate:13px 0}.ds-switch input:focus-visible+span{outline:2px solid oklch(0.50 0.085 205);outline-offset:2px}.ds-pop{border:0;background:transparent;font:inherit;color:oklch(0.44 0.012 235);padding:4px 8px;border-radius:6px;cursor:pointer}.ds-pop:hover{background:oklch(0.22 0.012 235 / 0.07);color:oklch(0.22 0.012 235)}.ds-pop:focus-visible{outline:2px solid oklch(0.50 0.085 205);outline-offset:2px}.ds-status{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:oklch(0.44 0.012 235)}.ds-status svg{width:14px;height:14px;fill:none;stroke:oklch(0.60 0.14 152);stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}"
+    },
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Petrol Fill push button for the one primary action.",
+      "html": "<button class=\"ds-btn-pri\">Weiter</button>",
+      "css": ".ds-btn-pri{border:0;height:24px;padding:0 11px;border-radius:6px;background:oklch(0.50 0.085 205);color:oklch(0.99 0.004 205);font:400 13px/1 -apple-system,system-ui,sans-serif;box-shadow:0 0.5px 1px oklch(0 0 0 / 0.22);cursor:pointer;transition:background-color 120ms,transform 120ms cubic-bezier(0.22,1,0.36,1)}.ds-btn-pri:hover{background:color-mix(in oklch,oklch(0.50 0.085 205) 90%,black)}.ds-btn-pri:active{transform:scale(0.98)}.ds-btn-pri:focus-visible{outline:2px solid oklch(0.50 0.085 205);outline-offset:2px}.ds-btn-pri:disabled{opacity:0.45}"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Standard push button.",
+      "html": "<button class=\"ds-btn\">Ändern …</button>",
+      "css": ".ds-btn{border:0;height:24px;padding:0 11px;border-radius:6px;background:#fff;color:oklch(0.22 0.012 235);font:400 13px/1 -apple-system,system-ui,sans-serif;box-shadow:0 0.5px 1.5px oklch(0.20 0.02 230 / 0.22),0 0 0 0.5px oklch(0.22 0.012 235 / 0.16);cursor:pointer;transition:background-color 120ms,transform 120ms cubic-bezier(0.22,1,0.36,1)}.ds-btn:hover{background:color-mix(in oklch,#fff 93%,oklch(0.22 0.012 235))}.ds-btn:active{transform:scale(0.98)}.ds-btn:focus-visible{outline:2px solid oklch(0.50 0.085 205);outline-offset:2px}"
+    },
+    {
+      "name": "Sidebar",
+      "kind": "nav",
+      "refersTo": "sidebar-item-selected",
+      "description": "Sidebar rows with Petrol symbols; the selected row is Petrol Fill.",
+      "html": "<nav class=\"ds-nav\"><button aria-current=\"page\"><svg viewBox=\"0 0 16 16\" aria-hidden=\"true\"><rect x=\"5.5\" y=\"1.5\" width=\"5\" height=\"8\" rx=\"2.5\"/><path d=\"M3 7.5a5 5 0 0010 0M8 12.5v2\"/></svg>Diktat</button><button><svg viewBox=\"0 0 16 16\" aria-hidden=\"true\"><path d=\"M3 2.5h10v11H3zM5.5 5.5h5M5.5 8h5\"/></svg>Wörterbuch</button></nav>",
+      "css": ".ds-nav{display:flex;flex-direction:column;gap:2px;width:212px;padding:10px;border-radius:14px;background:oklch(0.955 0.010 210 / 0.66)}.ds-nav button{display:flex;align-items:center;gap:9px;min-height:30px;padding:0 8px;border:0;border-radius:6px;background:transparent;font:400 13px/1.2 -apple-system,system-ui,sans-serif;color:oklch(0.22 0.012 235);text-align:left;transition:background-color 120ms}.ds-nav svg{width:16px;height:16px;fill:none;stroke:oklch(0.50 0.085 205);stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}.ds-nav button:hover{background:oklch(0.22 0.012 235 / 0.07)}.ds-nav button[aria-current=page]{background:oklch(0.50 0.085 205);color:oklch(0.99 0.004 205)}.ds-nav button[aria-current=page] svg{stroke:currentColor}.ds-nav button:focus-visible{outline:2px solid oklch(0.50 0.085 205);outline-offset:-2px}"
+    },
+    {
+      "name": "KeyCap",
+      "kind": "custom",
+      "refersTo": "keycap",
+      "description": "Drawn key for shortcuts; the skirt is the key's own side.",
+      "html": "<span class=\"ds-kc\"><svg viewBox=\"0 0 16 16\" aria-hidden=\"true\"><circle cx=\"8\" cy=\"8\" r=\"6\"/><path d=\"M2 8h12M8 2c2 2 2 10 0 12M8 2c-2 2-2 10 0 12\"/></svg>fn</span>",
+      "css": ".ds-kc{display:inline-flex;flex-direction:column;justify-content:space-between;align-items:flex-start;width:34px;height:30px;padding:4px 5px;border-radius:6px;background:#fff;box-shadow:0 0 0 0.5px oklch(0.22 0.012 235 / 0.16),0 1.5px 0 oklch(0.22 0.012 235 / 0.16);font:500 10px/1 -apple-system,system-ui,sans-serif;color:oklch(0.22 0.012 235)}.ds-kc svg{width:10px;height:10px;fill:none;stroke:currentColor;stroke-width:1.6}"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Quiet Instrument",
+    "overview": "Leise is a tool you play rather than visit. The product is the two seconds between pressing fn and seeing text land in the frontmost app, so the system puts its care into the instrument that is visible during those two seconds: the indicator pill and the five-bar mark. Everything else is a quiet native Mac settings window that you open for setup and leave again. The world is current macOS in the Liquid Glass era: system neutrals tinted slightly cool, a floating translucent sidebar, grouped inset forms, SF Pro for the interface and SF Pro Rounded for numbers.\n\nThe density is that of System Settings: 13 pt body text, 40 pt rows, generous group spacing, one page column of at most 620 pt. Color is almost absent. A single tint, Petrol, marks selection, primary actions and links, and three signal colors each carry exactly one meaning. Motion exists only to report a state change: the pill opens on a soft spring, the bars follow the voice, a wave runs while transcribing, the bars fold into a check on insert.\n\nThe confirmed rejection is the category default: a dark \"AI\" dashboard with glowing gradient waveforms. Nothing may resemble TypeWhisper's branding.",
+    "keyCharacteristics": [
+      "Native first: neutrals, text and materials are macOS system colors and materials; only brand colors are custom.",
+      "One tint (Petrol) plus three single-meaning signal colors (orange, red, green).",
+      "One motif: the five-bar Leise mark is the app icon, the menu bar glyph and the live waveform.",
+      "SF Pro for the interface, SF Pro Rounded only for numerals and setup titles.",
+      "Motion reports state; with Reduce Motion it becomes a plain crossfade."
+    ],
+    "rules": [
+      {
+        "name": "The One Meaning Rule",
+        "body": "Each brand color has one job. Orange means the microphone is live, red means the recorder is running or an error, green means ready or done, Petrol means selection, primary action and link. A color never borrows another's meaning, and decoration never uses a signal color.",
+        "section": "colors"
+      },
+      {
+        "name": "The Orange Is the Microphone Rule",
+        "body": "If orange is on screen, Leise is listening. Nothing else is ever orange: not warnings, not badges, not highlights.",
+        "section": "colors"
+      },
+      {
+        "name": "The System Owns the Neutrals Rule",
+        "body": "Text, backgrounds, separators and materials come from system semantic colors. A custom gray in the asset catalog is a bug.",
+        "section": "colors"
+      },
+      {
+        "name": "The Rounded Numbers Rule",
+        "body": "SF Pro Rounded appears only on numerals (counts, timers, durations, the recorder clock) and on setup titles. Every changing number uses tabular digits and animates with `.contentTransition(.numericText())`.",
+        "section": "typography"
+      },
+      {
+        "name": "The System Ramp Rule",
+        "body": "Type uses SwiftUI text styles, never fixed point sizes, so Dynamic Type and accessibility sizes keep working. No uppercase labels, no letter-spaced small caps.",
+        "section": "typography"
+      },
+      {
+        "name": "The Material Not Shadow Rule",
+        "body": "Never draw a custom shadow where a system material or window exists. With Reduce Transparency, glass becomes an opaque fill; with Increase Contrast, hairlines get stronger.",
+        "section": "elevation"
+      },
+      {
+        "name": "The Four Radii Rule",
+        "body": "A corner is 6, 10, 14 or 16, or a capsule. A fifth value needs a reason written down here first.",
+        "section": "shapes"
+      },
+      {
+        "name": "The Symbol Plus Text Rule",
+        "body": "State is never color alone. A status carries a symbol and words; the menu bar glyph changes shape (moving bars) as well as color.",
+        "section": "components"
+      },
+      {
+        "name": "The Motion Reports State Rule",
+        "body": "Every animation reports a state change. Nothing loops unless work is happening, and nothing moves for decoration.",
+        "section": "components"
+      }
+    ],
+    "dos": [
+      "Do use standard SwiftUI and AppKit components (`Form(.grouped)`, `Toggle`, `Picker`, `NavigationSplitView`, menus, popovers) so they adopt Liquid Glass on macOS 26+ and system materials on 14 and 15.",
+      "Do take every neutral from system semantic colors (`labelColor`, `secondaryLabelColor`, `windowBackgroundColor`, `separatorColor`); only `Color.accentColor`, `leiseTintFill`, `leiseLive`, `leiseRecord` and `leiseReady` live in the asset catalog, each with Any and Dark appearances.",
+      "Do keep orange for the live microphone only, red for recording and errors, green for ready and done, Petrol for selection, primary action and links.",
+      "Do pair every status color with an SF Symbol and text.",
+      "Do use SF Pro Rounded with tabular digits for numerals, and animate changing numbers with `.numericText()`.",
+      "Do use the four radii (6, 10, 14, 16) with continuous corners, or a capsule.",
+      "Do honor Reduce Motion (crossfade only), Reduce Transparency (opaque fills) and Increase Contrast (stronger lines).",
+      "Do use the five-bar LeiseMark as the only brand motif: icon, menu bar glyph and waveform."
+    ],
+    "donts": [
+      "Don't build a dark \"AI\" dashboard with glowing gradient waveforms.",
+      "Don't use anything resembling TypeWhisper's name, logo, icon or branding.",
+      "Don't use orange for warnings, badges or highlights; orange means the microphone is live.",
+      "Don't convey state by color alone.",
+      "Don't add custom grays, custom shadows or hand-drawn replacements for standard controls.",
+      "Don't set green or orange as text on light backgrounds; they color symbols and bars, the words stay in Label or Secondary Label.",
+      "Don't animate for decoration or loop an animation while nothing is happening."
+    ]
+  }
+}
