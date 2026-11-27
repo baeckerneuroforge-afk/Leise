@@ -25,7 +25,6 @@ colors:
   group-background-dark: "oklch(0.25 0.007 235)"
   control-background: "oklch(1 0 0)"
   control-background-dark: "oklch(0.34 0.008 235)"
-  pill-black: "#000000"
   pill-glass: "oklch(0.20 0.008 235 / 0.74)"
   pill-glass-dark: "oklch(0.15 0.008 235 / 0.72)"
 typography:
@@ -74,6 +73,7 @@ rounded:
   group: "10px"
   panel: "14px"
   window: "16px"
+  full: "9999px"
 spacing:
   xs: "4px"
   s: "8px"
@@ -125,20 +125,12 @@ components:
     rounded: "{rounded.control}"
     width: "34px"
     height: "30px"
-  indicator-pill-notch:
-    backgroundColor: "{colors.pill-black}"
-    textColor: "{colors.label-dark}"
-    width: "346px"
-    height: "74px"
-  indicator-pill-float:
+  indicator-pill:
     backgroundColor: "{colors.pill-glass}"
     textColor: "{colors.label-dark}"
-    width: "340px"
-    height: "44px"
-  indicator-pill-mini:
-    backgroundColor: "{colors.pill-glass}"
-    width: "64px"
+    rounded: "{rounded.full}"
     height: "30px"
+    width: "44px (resting, 14px tall) / 64px (listening) / up to 480px (messages)"
 ---
 
 # Design System: Leise
@@ -183,7 +175,6 @@ All neutrals ship as macOS system semantic colors so Dark Mode, Increase Contras
 - **Group Background** (light #FFFFFF, dark #1F2225): grouped form sections; supplied by `Form` with `.formStyle(.grouped)`.
 - **Control Background** (light #FFFFFF, dark #34393C): push buttons, keycaps; supplied by standard controls.
 - **Separator**: hairline row dividers and group outlines; `separatorColor`.
-- **Pill Black** (#000000): the notch pill, so it merges with the camera housing.
 - **Pill Glass** (light `oklch(0.20 0.008 235 / 0.74)` / #131719 at 74%, dark `oklch(0.15 0.008 235 / 0.72)` / #080C0E at 72%): the float and mini pill. The pill is dark in both appearances.
 
 ### Named Rules
@@ -221,7 +212,7 @@ Spacing runs on a 4 pt grid with seven steps: xs 4, s 8, m 12, l 16, xl 20, xxl 
 
 The settings window is a `NavigationSplitView`: a floating translucent sidebar (232 pt) with search on top and nine pages in two named groups, and a content column whose page content is centered at most 620 pt wide. The page title lives in the toolbar. Pages that are lists (history) split into a 250 pt list and a detail panel. The window keeps the system's minimum sizes; on narrow widths the sidebar collapses as `NavigationSplitView` does on its own.
 
-The indicator lives outside the window: under the notch (centered on the camera housing), or floating 26 pt above the bottom of the screen, centered.
+The indicator lives outside the window: a pill 12 pt above the bottom of the screen (above the Dock), on the left, center or right anchor.
 
 ## Elevation & Depth
 
@@ -238,7 +229,7 @@ Preview reference values; in SwiftUI these come from the system where a system s
 
 ## Shapes
 
-Four radii replace today's fifteen: control 6 pt (buttons, popups, keycaps, app glyphs), group 10 pt (grouped form sections, tips, inline fields), panel 14 pt (menus, popovers, detail panels), window 16 pt (windows, the setup window). Use `RoundedRectangle(cornerRadius:style: .continuous)`. The float and mini pill are capsules. The notch pill has square top corners that meet the screen edge with 8 pt inverse fillets, and rounds only at the bottom (12 pt idle, 24 pt open). Status dots and the mark's bars are fully round.
+Four radii replace today's fifteen: control 6 pt (buttons, popups, keycaps, app glyphs), group 10 pt (grouped form sections, tips, inline fields), panel 14 pt (menus, popovers, detail panels), window 16 pt (windows, the setup window). Use `RoundedRectangle(cornerRadius:style: .continuous)`. The indicator pill is a capsule. Status dots and the mark's bars are fully round.
 
 ### Named Rules
 **The Four Radii Rule.** A corner is 6, 10, 14 or 16, or a capsule. A fifth value needs a reason written down here first.
@@ -252,13 +243,14 @@ The brand in five bars: an attack-then-fade word envelope.
 - **States:** resting, live (bars follow the voice level through `TimelineView(.animation)`), wave (a 900 ms ease-in-out loop with a 90 ms stagger, only while transcribing), check (bars fold to 12% and a check draws, 280 ms after a 100 ms delay).
 
 ### IndicatorPill
-The product. One component, three positions, the same parts: leading ear (elapsed time, or the target app's AppGlyph once inserted), bars, and a text line.
-- **Notch:** Pill Black, grows out of the camera housing from the notch size (196 by 32 pt) to 346 by 74 pt, with 75 pt ears either side of the notch; the text line sits under the notch.
-- **Float:** Pill Glass capsule, 44 pt tall, 180 pt at rest to 340 pt open; enters from 10 pt below at 94% scale.
-- **Mini:** bars only, 30 pt capsule, 46 to 64 pt wide; widens to 290 pt only to show a done or error message.
-- **States:** listening (bars in Microphone Orange follow the voice, time runs), processing (bars in white at 78% run the wave, "Wird geschrieben …"), done (bars fold into a green check, the AppGlyph names where the text landed: "In Mail eingefügt"), error (a red cross, a 300 ms four-beat head shake, and a cause the user can act on: "Keine Sprache erkannt"), cancel (a neutral white cross, no shake).
-- **Motion:** open and close on `.spring(duration: 0.28, bounce: 0.12)`; contents fade in 90 ms after the shape starts. Reduce Motion: opacity crossfade only, no shake, no wave.
-- **Text:** body 13 pt medium, white at 88%, one line, truncated at the tail.
+The product. One pill, always at the bottom of the screen (decided 2026-11-27: the minimal style, no notch or overlay styles). It sits 12 pt above the Dock on one of three anchors: left and right 96 pt inside the visible frame, or center (default). The side anchors keep their outer edge, so a wider pill grows toward the center.
+- **Idle** (visibility "Immer", the default): a quiet dark capsule of 44 by 14 pt with the bars resting at low opacity. "Nur beim Diktieren" lets the pill rise from below when dictation starts; "Nie" hides it.
+- **Hover:** expands with the shape spring to show the mark and the real shortcut hint ("fn halten zum Sprechen"), or that dictation is paused or no model is loaded.
+- **Drag:** starts after 3 pt, follows the pointer 1:1 horizontally, rubber-bands at most 6 pt vertically, shows the three anchors as faint dots, projects the landing point (x + velocity x 0.2 s) and springs to the nearest anchor. Interruptible, with an alignment haptic when the target anchor changes; Esc returns it. VoiceOver exposes an adjustable "Position". Clicks around the pill always reach the apps underneath.
+- **States:** listening (about 64 pt; bars in Microphone Orange follow the voice), processing (bars in white at 78% run the wave), done (the target app's icon plus "In Mail eingefügt"; the bars fold into a check), error (a red cross, a 300 ms four-beat head shake, and a cause the user can act on, such as "Keine Sprache erkannt"), cancel (a neutral white cross), and the Esc hint "Noch einmal Esc zum Abbrechen". Messages may widen the pill up to 480 pt so long German texts read in full; the Undo button and every toast live inside it.
+- **Material:** dark HUD material (`NSVisualEffectView` .hudWindow) with a 12% white hairline and an outer shadow; opaque near-black under Reduce Transparency. Excluded from screen capture.
+- **Motion:** geometry on `LeiseMotion.shapeSpring` (0.28 s, bounce 0.12), driven by a display link so it stays interruptible; contents fade in after the shape starts. Reduce Motion: crossfades, static listening shape, no shake, no wave.
+- **Text:** 12.5 to 13 pt, white at 88%; times in SF Pro Rounded with monospaced digits.
 
 ### SettingsPage
 A page title, an optional lede in Secondary, then `Form` with `.formStyle(.grouped)`. Every row carries a search anchor so settings search can jump to and briefly flash it in Petrol at 12%.
