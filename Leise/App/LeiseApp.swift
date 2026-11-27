@@ -118,7 +118,7 @@ private struct ManagedWindowOpenerRegistrar: View {
 
 enum MenuBarLogoMarkImage {
     static let size = CGSize(width: 18, height: 18)
-    private static let relativeBarHeights: [CGFloat] = [0.5, 0.75, 1.0, 0.75, 0.5]
+    private static let relativeBarHeights: [CGFloat] = LeiseMarkShape.restingHeights
 
     static func image(for state: MenuBarIconState) -> NSImage {
         let image = NSImage(size: size)

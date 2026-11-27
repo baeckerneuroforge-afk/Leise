@@ -10,6 +10,312 @@
 	<string>60</string>
 	<key>objects</key>
 	<dict>
+		<key>BD00000000000000000002</key>
+		<dict>
+			<key>fileRef</key>
+			<string>BD00000000000000000001</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+		</dict>
+		<key>BD00000000000000000001</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>lastKnownFileType</key>
+			<string>sourcecode.swift</string>
+			<key>path</key>
+			<string>LeiseTheme.swift</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
+		</dict>
+		<key>BD00000000000000000004</key>
+		<dict>
+			<key>fileRef</key>
+			<string>BD00000000000000000003</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+		</dict>
+		<key>BD00000000000000000003</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>lastKnownFileType</key>
+			<string>sourcecode.swift</string>
+			<key>path</key>
+			<string>LeiseMark.swift</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
+		</dict>
+		<key>BD00000000000000000006</key>
+		<dict>
+			<key>fileRef</key>
+			<string>BD00000000000000000005</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+		</dict>
+		<key>BD00000000000000000005</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>lastKnownFileType</key>
+			<string>sourcecode.swift</string>
+			<key>path</key>
+			<string>LeiseControls.swift</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
+		</dict>
+		<key>BD00000000000000000008</key>
+		<dict>
+			<key>fileRef</key>
+			<string>BD00000000000000000007</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+		</dict>
+		<key>BD00000000000000000007</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>lastKnownFileType</key>
+			<string>sourcecode.swift</string>
+			<key>path</key>
+			<string>LeisePillView.swift</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
+		</dict>
+		<key>BD00000000000000000010</key>
+		<dict>
+			<key>fileRef</key>
+			<string>BD00000000000000000009</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+		</dict>
+		<key>BD00000000000000000009</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>lastKnownFileType</key>
+			<string>sourcecode.swift</string>
+			<key>path</key>
+			<string>LeisePillPanel.swift</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
+		</dict>
+		<key>BD00000000000000000012</key>
+		<dict>
+			<key>fileRef</key>
+			<string>BD00000000000000000011</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+		</dict>
+		<key>BD00000000000000000011</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>lastKnownFileType</key>
+			<string>sourcecode.swift</string>
+			<key>path</key>
+			<string>OverviewPage.swift</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
+		</dict>
+		<key>BD00000000000000000014</key>
+		<dict>
+			<key>fileRef</key>
+			<string>BD00000000000000000013</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+		</dict>
+		<key>BD00000000000000000013</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>lastKnownFileType</key>
+			<string>sourcecode.swift</string>
+			<key>path</key>
+			<string>TranscribePage.swift</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
+		</dict>
+		<key>BD00000000000000000016</key>
+		<dict>
+			<key>fileRef</key>
+			<string>BD00000000000000000015</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+		</dict>
+		<key>BD00000000000000000015</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>lastKnownFileType</key>
+			<string>sourcecode.swift</string>
+			<key>path</key>
+			<string>DictationSettingsPage.swift</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
+		</dict>
+		<key>BD00000000000000000018</key>
+		<dict>
+			<key>fileRef</key>
+			<string>BD00000000000000000017</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+		</dict>
+		<key>BD00000000000000000017</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>lastKnownFileType</key>
+			<string>sourcecode.swift</string>
+			<key>path</key>
+			<string>AudioSettingsPage.swift</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
+		</dict>
+		<key>BD00000000000000000020</key>
+		<dict>
+			<key>fileRef</key>
+			<string>BD00000000000000000019</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+		</dict>
+		<key>BD00000000000000000019</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>lastKnownFileType</key>
+			<string>sourcecode.swift</string>
+			<key>path</key>
+			<string>AppearanceSettingsPage.swift</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
+		</dict>
+		<key>BD00000000000000000022</key>
+		<dict>
+			<key>fileRef</key>
+			<string>BD00000000000000000021</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+		</dict>
+		<key>BD00000000000000000021</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>lastKnownFileType</key>
+			<string>sourcecode.swift</string>
+			<key>path</key>
+			<string>SettingsSearch.swift</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
+		</dict>
+		<key>BD00000000000000000024</key>
+		<dict>
+			<key>fileRef</key>
+			<string>BD00000000000000000023</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+		</dict>
+		<key>BD00000000000000000023</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>lastKnownFileType</key>
+			<string>sourcecode.swift</string>
+			<key>path</key>
+			<string>SetupSteps.swift</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
+		</dict>
+		<key>BD00000000000000000026</key>
+		<dict>
+			<key>fileRef</key>
+			<string>BD00000000000000000025</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+		</dict>
+		<key>BD00000000000000000025</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>lastKnownFileType</key>
+			<string>sourcecode.swift</string>
+			<key>path</key>
+			<string>GlobeKeyService.swift</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
+		</dict>
+		<key>BD00000000000000000028</key>
+		<dict>
+			<key>fileRef</key>
+			<string>BD00000000000000000027</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+		</dict>
+		<key>BD00000000000000000027</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>lastKnownFileType</key>
+			<string>sourcecode.swift</string>
+			<key>path</key>
+			<string>LeisePillPlacementTests.swift</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
+		</dict>
+		<key>BD00000000000000000030</key>
+		<dict>
+			<key>fileRef</key>
+			<string>BD00000000000000000029</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+		</dict>
+		<key>BD00000000000000000029</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>lastKnownFileType</key>
+			<string>sourcecode.swift</string>
+			<key>path</key>
+			<string>SettingsStructureTests.swift</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
+		</dict>
+		<key>BD00000000000000000032</key>
+		<dict>
+			<key>fileRef</key>
+			<string>BD00000000000000000031</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+		</dict>
+		<key>BD00000000000000000031</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>lastKnownFileType</key>
+			<string>sourcecode.swift</string>
+			<key>path</key>
+			<string>MenuAndSetupTests.swift</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
+		</dict>
+		<key>BD00000000000000000034</key>
+		<dict>
+			<key>fileRef</key>
+			<string>BD00000000000000000033</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+		</dict>
+		<key>BD00000000000000000033</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>lastKnownFileType</key>
+			<string>sourcecode.swift</string>
+			<key>path</key>
+			<string>GlobeKeyServiceTests.swift</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
+		</dict>
 		<key>E7B100000000000000000001</key>
 		<dict>
 			<key>fileRef</key>
@@ -3244,6 +3550,7 @@
 				<string>BB00000000000000000246</string>
 				<string>BB00000000000000000272</string>
 				<string>D4A100000000000000000002</string>
+				<string>BD00000000000000000025</string>
 			</array>
 			<key>isa</key>
 			<string>PBXGroup</string>
@@ -3314,6 +3621,18 @@
 				<string>BB00000000000000000248</string>
 				<string>BB00000000000000000249</string>
 				<string>BB00000000000000000250</string>
+				<string>BD00000000000000000001</string>
+				<string>BD00000000000000000003</string>
+				<string>BD00000000000000000005</string>
+				<string>BD00000000000000000007</string>
+				<string>BD00000000000000000009</string>
+				<string>BD00000000000000000011</string>
+				<string>BD00000000000000000013</string>
+				<string>BD00000000000000000015</string>
+				<string>BD00000000000000000017</string>
+				<string>BD00000000000000000019</string>
+				<string>BD00000000000000000021</string>
+				<string>BD00000000000000000023</string>
 			</array>
 			<key>isa</key>
 			<string>PBXGroup</string>
@@ -3499,6 +3818,10 @@
 				<string>BB00000000000000000902</string>
 				<string>B26D2C342D877030A62CE027</string>
 				<string>05313C25F9E79BCFC02899F2</string>
+				<string>BD00000000000000000027</string>
+				<string>BD00000000000000000029</string>
+				<string>BD00000000000000000031</string>
+				<string>BD00000000000000000033</string>
 			</array>
 			<key>isa</key>
 			<string>PBXGroup</string>
@@ -3640,6 +3963,10 @@
 				<string>AA00000000000000000902</string>
 				<string>204C804898EAE1127B62EC98</string>
 				<string>76858B5B28A121356A5D9599</string>
+				<string>BD00000000000000000028</string>
+				<string>BD00000000000000000030</string>
+				<string>BD00000000000000000032</string>
+				<string>BD00000000000000000034</string>
 			</array>
 			<key>isa</key>
 			<string>PBXSourcesBuildPhase</string>
@@ -4036,6 +4363,19 @@
 				<string>AA00000000000000000261</string>
 				<string>AA00000000000000000262</string>
 				<string>AA00000000000000000354</string>
+				<string>BD00000000000000000002</string>
+				<string>BD00000000000000000004</string>
+				<string>BD00000000000000000006</string>
+				<string>BD00000000000000000008</string>
+				<string>BD00000000000000000010</string>
+				<string>BD00000000000000000012</string>
+				<string>BD00000000000000000014</string>
+				<string>BD00000000000000000016</string>
+				<string>BD00000000000000000018</string>
+				<string>BD00000000000000000020</string>
+				<string>BD00000000000000000022</string>
+				<string>BD00000000000000000024</string>
+				<string>BD00000000000000000026</string>
 			</array>
 			<key>isa</key>
 			<string>PBXSourcesBuildPhase</string>
