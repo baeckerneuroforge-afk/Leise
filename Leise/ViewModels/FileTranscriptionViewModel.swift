@@ -79,13 +79,25 @@ final class FileTranscriptionViewModel: ObservableObject {
     @Published var batchState: BatchState = .idle
     @Published var currentIndex: Int = 0
     @Published private var elapsedRefreshDate = Date()
-    @Published var languageSelection: LanguageSelection = .auto {
+    /// Transkribieren › Datei › Sprache. `.inheritGlobal` ("Wie beim
+    /// Diktat") follows the dictation language.
+    @Published var languageSelection: LanguageSelection = .inheritGlobal {
         didSet {
             defaults.set(
-                languageSelection.storedValue(nilBehavior: .auto),
+                languageSelection.storedValue(nilBehavior: .inheritGlobal),
                 forKey: UserDefaultsKeys.fileTranscriptionLanguage
             )
         }
+    }
+
+    /// The language a transcription actually uses: "Wie beim Diktat" resolves
+    /// to the dictation language when the batch starts.
+    var effectiveLanguageSelection: LanguageSelection {
+        guard languageSelection == .inheritGlobal else { return languageSelection }
+        return LanguageSelection(
+            storedValue: defaults.string(forKey: UserDefaultsKeys.selectedLanguage),
+            nilBehavior: .auto
+        )
     }
     @Published var selectedEngine: String? {
         didSet {
@@ -176,10 +188,15 @@ final class FileTranscriptionViewModel: ObservableObject {
         }
         self.languageSelection = LanguageSelection(
             storedValue: defaults.string(forKey: UserDefaultsKeys.fileTranscriptionLanguage),
-            nilBehavior: .auto
+            nilBehavior: .inheritGlobal
         )
-        self.selectedEngine = defaults.string(forKey: UserDefaultsKeys.fileTranscriptionEngine)
-        self.selectedModel = defaults.string(forKey: UserDefaultsKeys.fileTranscriptionModel)
+        // The model comes from Diktat › Sprache & Modell. File transcription
+        // has no engine or model picker anymore, so overrides saved by older
+        // versions would silently win; drop them.
+        defaults.removeObject(forKey: UserDefaultsKeys.fileTranscriptionEngine)
+        defaults.removeObject(forKey: UserDefaultsKeys.fileTranscriptionModel)
+        self.selectedEngine = nil
+        self.selectedModel = nil
         self.isInitialized = true
         reconcileSelectionWithAvailableEngines()
     }
@@ -341,7 +358,7 @@ final class FileTranscriptionViewModel: ObservableObject {
 
             let result = try await transcriptionRunner(
                 samples,
-                languageSelection,
+                effectiveLanguageSelection,
                 .transcribe,
                 selectedEngine,
                 selectedModel,

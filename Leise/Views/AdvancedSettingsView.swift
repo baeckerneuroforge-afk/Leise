@@ -1,65 +1,74 @@
 import SwiftUI
 import UniformTypeIdentifiers
 
+/// Erweitert: backups, diagnostics, fine-tuning, spoken punctuation, updates.
 struct AdvancedSettingsView: View {
     @ObservedObject private var modelManager = ServiceContainer.shared.modelManagerService
     @ObservedObject private var dictation = ServiceContainer.shared.dictationViewModel
     @ObservedObject private var errorLogService = ServiceContainer.shared.errorLogService
-    private let backupService = ServiceContainer.shared.userDataBackupService
+    @AppStorage(UserDefaultsKeys.updateChannel)
+    private var updateChannelRawValue = AppConstants.defaultReleaseChannel.rawValue
 
-    @State private var showClearUsageStatisticsConfirmation = false
-    @State private var showImportConfirmation = false
+    @State private var showsImportConfirmation = false
     @State private var pendingImportURL: URL?
     @State private var pendingImportSummary: UserDataBackupSummary?
     @State private var notice: SettingsNotice?
+    @State private var showsUsageData = false
 
-    @AppStorage(UserDefaultsKeys.historyEnabled) private var historyEnabled = true
-    @AppStorage(UserDefaultsKeys.historyRetentionDays) private var historyRetentionDays = 0
-    @AppStorage(UserDefaultsKeys.saveAudioWithHistory) private var saveAudioWithHistory = false
+    private let backupService = ServiceContainer.shared.userDataBackupService
 
     var body: some View {
-        Form {
-            Section(String(localized: "Backup & Restore")) {
-                Text(String(localized: "Export preferences, dictionary entries, profiles, and transcription history to one JSON file, or restore them from a previous backup."))
-                .foregroundStyle(.secondary)
-
-                HStack {
-                    Button(action: exportUserData) {
-                        Label(
-                            String(localized: "Export Backup"),
-                            systemImage: "square.and.arrow.up"
-                        )
-                    }
-                    Button(action: chooseBackupToImport) {
-                        Label(
-                            String(localized: "Import Backup"),
-                            systemImage: "square.and.arrow.down"
-                        )
-                    }
+        SettingsPage(.advanced) {
+            Section {
+                LabeledContent {
+                    Button(String(localized: "Export…"), action: exportUserData)
+                } label: {
+                    SettingsRowLabel(
+                        title: SettingsRow.backup.title,
+                        subtitle: String(localized: "Saves Leise’s data in one file."),
+                        info: String(localized: "Contains settings, dictionary, app rules and history. Downloaded models, audio recordings and your own sounds are not included.")
+                    )
                 }
+                .settingsRow(.backup)
 
-                Text(String(localized: "API keys, downloaded models, caches, audio recordings, and custom sound files are not included."))
-                .font(.caption)
-                .foregroundStyle(.secondary)
+                LabeledContent {
+                    Button(String(localized: "Import…"), action: chooseBackupToImport)
+                } label: {
+                    Text(String(localized: "Import backup"))
+                }
+            } header: {
+                Text(String(localized: "Data"))
             }
 
-            Section(String(localized: "Support Diagnostics")) {
-                HStack {
-                    Button(action: exportDiagnostics) {
-                        Label(
-                            String(localized: "Export Diagnostics"),
-                            systemImage: "square.and.arrow.up"
-                        )
-                    }
-                    SettingsInfoButton(text: String(localized: "Creates a JSON support report with app, system, permission, settings, and audio-device diagnostics."))
+            Section {
+                ErrorLogDisclosure(errorLogService: errorLogService)
+
+                LabeledContent {
+                    Button(String(localized: "Export…"), action: exportDiagnostics)
+                } label: {
+                    SettingsRowLabel(
+                        title: SettingsRow.exportDiagnostics.title,
+                        subtitle: String(localized: "For bug reports."),
+                        info: String(localized: "A JSON report with app, system, permission, settings and audio-device details, plus the error log.")
+                    )
                 }
+                .settingsRow(.exportDiagnostics)
+
+                LabeledContent {
+                    Button(String(localized: "Show…")) { showsUsageData = true }
+                } label: {
+                    SettingsRowLabel(
+                        title: SettingsRow.usageData.title,
+                        subtitle: String(localized: "Quality, corrections, models.")
+                    )
+                }
+                .settingsRow(.usageData)
+            } header: {
+                Text(String(localized: "Diagnostics"))
             }
 
-            Section(String(localized: "Recording")) {
-                Picker(selection: Binding(
-                    get: { modelManager.autoUnloadSeconds },
-                    set: { modelManager.autoUnloadSeconds = $0 }
-                )) {
+            Section {
+                Picker(selection: $modelManager.autoUnloadSeconds) {
                     Text(String(localized: "Never")).tag(0)
                     Divider()
                     Text(String(localized: "Immediate")).tag(-1)
@@ -69,82 +78,81 @@ struct AdvancedSettingsView: View {
                     Text(String(localized: "After 30 minutes")).tag(1800)
                     Text(String(localized: "After 1 hour")).tag(3600)
                 } label: {
-                    SettingsInfoLabel(
-                        title: String(localized: "Auto-unload model"),
-                        info: String(localized: "Keeps local models in memory by default for fast dictation. If auto-unload is enabled, Leise starts reloading the model when recording begins. Does not affect cloud engines.")
+                    SettingsRowLabel(
+                        title: SettingsRow.modelUnload.title,
+                        info: String(localized: "By default the model stays in memory so dictation starts at once. With unloading, Leise loads it again when you start the next dictation.")
                     )
                 }
+                .settingsRow(.modelUnload)
 
-                Toggle(isOn: $dictation.transcribeShortQuietClipsAggressively) {
-                    SettingsInfoLabel(
-                        title: String(localized: "Transcribe short / quiet clips more aggressively"),
-                        info: String(localized: "Still discards accidental ultra-short taps, but keeps more very short or quiet recordings instead of classifying them as no speech.")
+                Toggle(isOn: Binding(
+                    get: { !dictation.transcribeShortQuietClipsAggressively },
+                    set: { dictation.transcribeShortQuietClipsAggressively = !$0 }
+                )) {
+                    SettingsRowLabel(
+                        title: SettingsRow.shortQuietClips.title,
+                        info: String(localized: "When off, Leise also transcribes very short or quiet recordings instead of treating them as silence. Accidental taps are always discarded.")
                     )
                 }
+                .settingsRow(.shortQuietClips)
 
                 Toggle(isOn: $dictation.microphoneBoostEnabled) {
-                    SettingsInfoLabel(
-                        title: String(localized: "Whisper Mode (AGC)"),
-                        info: String(localized: "Automatically raises quiet microphone input before transcription. Useful for low-gain microphones, but very noisy rooms may sound louder too.")
+                    SettingsRowLabel(
+                        title: SettingsRow.whisperMode.title,
+                        subtitle: String(localized: "Raises quiet voices automatically."),
+                        info: String(localized: "Adjusts the level so whispered sentences are recognized too. In loud rooms the noise gets louder as well.")
                     )
                 }
+                .settingsRow(.whisperMode)
+            } header: {
+                Text(String(localized: "Fine-Tuning"))
             }
 
             SpokenPunctuationSettingsSection()
 
-            Section(String(localized: "History")) {
-                Toggle(isOn: $historyEnabled) {
-                    SettingsInfoLabel(
-                        title: String(localized: "Save history"),
-                        info: String(localized: "Saves transcriptions to the history tab.")
+            Section {
+                Picker(selection: updateChannel) {
+                    ForEach(AppConstants.ReleaseChannel.allCases, id: \.self) { channel in
+                        Text(channel.selectionDisplayName).tag(channel)
+                    }
+                } label: {
+                    SettingsRowLabel(
+                        title: SettingsRow.updateChannel.title,
+                        info: selectedUpdateChannel.updateDescription
                     )
                 }
+                .settingsRow(.updateChannel)
 
-                if historyEnabled {
-                    Toggle(isOn: $saveAudioWithHistory) {
-                        SettingsInfoLabel(
-                            title: String(localized: "Save audio with transcriptions"),
-                            info: String(localized: "Stores a WAV recording alongside each transcription. Uses approximately 1 MB per 30 seconds.")
-                        )
+                LabeledContent {
+                    Button(String(localized: "Check Now")) {
+                        UpdateChecker.shared?.checkForUpdates()
                     }
-
-                    Picker(selection: $historyRetentionDays) {
-                        Text(String(localized: "Unlimited")).tag(0)
-                        Text(String(localized: "30 days")).tag(30)
-                        Text(String(localized: "60 days")).tag(60)
-                        Text(String(localized: "90 days")).tag(90)
-                        Text(String(localized: "180 days")).tag(180)
-                    } label: {
-                        SettingsInfoLabel(
-                            title: String(localized: "Auto-delete after"),
-                            info: String(localized: "Older entries are automatically removed at app launch.")
-                        )
-                    }
-                }
-
-                Button(role: .destructive) {
-                    showClearUsageStatisticsConfirmation = true
+                    .disabled(UpdateChecker.shared?.canCheckForUpdates() != true)
                 } label: {
-                    Label(String(localized: "Clear Usage Statistics"), systemImage: "trash")
+                    Text(String(localized: "Check for updates"))
                 }
-                .confirmationDialog(
-                    String(localized: "Clear Usage Statistics?"),
-                    isPresented: $showClearUsageStatisticsConfirmation
-                ) {
-                    Button(String(localized: "Clear Statistics"), role: .destructive) {
-                        ServiceContainer.shared.usageStatisticsService.clearUsageStatistics()
-                    }
-                } message: {
-                    Text(String(localized: "This will permanently delete all aggregate activity, application, habit, and quality statistics. Transcription history entries are unchanged."))
+            } header: {
+                Text(String(localized: "Updates"))
+            }
+
+            Section {
+                LabeledContent {
+                    Button(String(localized: "Open Again…"), action: openSetup)
+                } label: {
+                    SettingsRowLabel(
+                        title: SettingsRow.setupAssistant.title,
+                        subtitle: String(localized: "Walks you through the first steps again. Your settings stay as they are.")
+                    )
                 }
+                .settingsRow(.setupAssistant)
             }
         }
-        .formStyle(.grouped)
-        .padding()
-        .frame(minWidth: 500, minHeight: 300)
+        .sheet(isPresented: $showsUsageData) {
+            UsageAnalyticsSheet()
+        }
         .confirmationDialog(
             String(localized: "Import Backup?"),
-            isPresented: $showImportConfirmation
+            isPresented: $showsImportConfirmation
         ) {
             Button(String(localized: "Replace Current Data"), role: .destructive) {
                 importPendingBackup()
@@ -162,10 +170,38 @@ struct AdvancedSettingsView: View {
             Alert(
                 title: Text(notice.title),
                 message: Text(notice.message),
-                dismissButton: .default(Text("OK"))
+                dismissButton: .default(Text(String(localized: "OK")))
             )
         }
     }
+
+    // MARK: Updates
+
+    private var selectedUpdateChannel: AppConstants.ReleaseChannel {
+        AppConstants.ReleaseChannel(rawValue: updateChannelRawValue) ?? AppConstants.defaultReleaseChannel
+    }
+
+    private var updateChannel: Binding<AppConstants.ReleaseChannel> {
+        Binding(
+            get: { selectedUpdateChannel },
+            set: { newChannel in
+                guard selectedUpdateChannel != newChannel else { return }
+                updateChannelRawValue = newChannel.rawValue
+                UpdateChecker.shared?.resetUpdateCycleAfterSettingsChange()
+            }
+        )
+    }
+
+    // MARK: Setup
+
+    /// The setup flow again, from the first step, with every setting kept.
+    private func openSetup() {
+        UserDefaults.standard.set(0, forKey: UserDefaultsKeys.setupWizardCurrentStep)
+        NotificationCenter.default.post(name: .resetSetupWizardWindow, object: nil)
+        ManagedAppWindowOpener.shared.open(id: "setup")
+    }
+
+    // MARK: Backup
 
     private func exportUserData() {
         let panel = NSSavePanel()
@@ -203,7 +239,7 @@ struct AdvancedSettingsView: View {
             do {
                 pendingImportSummary = try backupService.inspectBackup(at: url)
                 pendingImportURL = url
-                showImportConfirmation = true
+                showsImportConfirmation = true
             } catch {
                 notice = SettingsNotice(
                     title: String(localized: "Invalid Backup"),
@@ -240,18 +276,7 @@ struct AdvancedSettingsView: View {
         return "leise-backup-\(formatter.string(from: Date())).json"
     }
 
-    private struct SettingsNotice: Identifiable {
-        let id = UUID()
-        let title: String
-        let message: String
-    }
-
-    private func showDiagnosticsExportFailure(_ error: Error) {
-        notice = SettingsNotice(
-            title: String(localized: "Export Failed"),
-            message: error.localizedDescription
-        )
-    }
+    // MARK: Diagnostics
 
     private func exportDiagnostics() {
         let panel = NSSavePanel()
@@ -266,7 +291,10 @@ struct AdvancedSettingsView: View {
                 do {
                     try await errorLogService.exportDiagnostics(to: url)
                 } catch {
-                    showDiagnosticsExportFailure(error)
+                    notice = SettingsNotice(
+                        title: String(localized: "Export Failed"),
+                        message: error.localizedDescription
+                    )
                 }
             }
         }
@@ -280,40 +308,8 @@ struct AdvancedSettingsView: View {
     }
 }
 
-struct SettingsInfoLabel: View {
+private struct SettingsNotice: Identifiable {
+    let id = UUID()
     let title: String
-    let info: String
-
-    var body: some View {
-        HStack(spacing: 4) {
-            Text(title)
-            SettingsInfoButton(text: info)
-        }
-    }
-}
-
-struct SettingsInfoButton: View {
-    let text: String
-    @State private var isPresented = false
-
-    var body: some View {
-        Button {
-            isPresented.toggle()
-        } label: {
-            Image(systemName: "info.circle")
-                .imageScale(.small)
-                .foregroundStyle(.secondary)
-        }
-        .buttonStyle(.borderless)
-        .help(text)
-        .accessibilityLabel(String(localized: "More information"))
-        .popover(isPresented: $isPresented, arrowEdge: .trailing) {
-            Text(text)
-                .font(.callout)
-                .foregroundStyle(.primary)
-                .fixedSize(horizontal: false, vertical: true)
-                .padding(12)
-                .frame(width: 300, alignment: .leading)
-        }
-    }
+    let message: String
 }

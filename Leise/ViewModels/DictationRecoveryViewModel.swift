@@ -25,6 +25,19 @@ final class DictationRecoveryViewModel: ObservableObject {
         let url: URL
         var state: RecoveryState = .idle
         var errorMessage: String?
+        /// When the recording was kept, from the file's modification date.
+        let recordedAt: Date
+        /// The audio's length, read from the WAV size; nil if unreadable.
+        let duration: TimeInterval?
+
+        init(url: URL, state: RecoveryState = .idle, errorMessage: String? = nil) {
+            self.url = url
+            self.state = state
+            self.errorMessage = errorMessage
+            let attributes = try? FileManager.default.attributesOfItem(atPath: url.path)
+            self.recordedAt = attributes?[.modificationDate] as? Date ?? Date()
+            self.duration = (attributes?[.size] as? NSNumber).map { Self.duration(ofRecoveryWAVBytes: $0.intValue) }
+        }
 
         var id: String { url.path }
         var fileName: String { url.lastPathComponent }
@@ -32,16 +45,27 @@ final class DictationRecoveryViewModel: ObservableObject {
         var isProcessing: Bool {
             state == .loading || state == .transcribing
         }
+
+        /// Recovery files are 16 kHz mono 16-bit PCM WAV with a 44-byte header
+        /// (`DictationRecoveryAudioStore`), so the size gives the length
+        /// without decoding the audio.
+        static func duration(ofRecoveryWAVBytes byteCount: Int) -> TimeInterval {
+            let headerBytes = 44
+            let bytesPerSecond = 16_000 * 2
+            return TimeInterval(max(byteCount - headerBytes, 0)) / TimeInterval(bytesPerSecond)
+        }
     }
 
     @Published private(set) var recoveries: [RecoveryItem]
     @Published var selectedRecoveryID: RecoveryItem.ID?
     @Published private(set) var lastSavedRecoveryFileName: String?
     @Published private(set) var lastSavedHistoryRecordID: UUID?
-    @Published var languageSelection: LanguageSelection = .auto {
+    /// `.inheritGlobal` uses the dictation language, which is what the
+    /// history page offers ("Erneut transkribieren").
+    @Published var languageSelection: LanguageSelection = .inheritGlobal {
         didSet {
             defaults.set(
-                languageSelection.storedValue(nilBehavior: .auto),
+                languageSelection.storedValue(nilBehavior: .inheritGlobal),
                 forKey: UserDefaultsKeys.dictationRecoveryLanguage
             )
         }
@@ -100,12 +124,15 @@ final class DictationRecoveryViewModel: ObservableObject {
         let initialRecoveryURLs = audioRecordingService.recoveryRecordingURLs
         self.recoveries = initialRecoveryURLs.map { RecoveryItem(url: $0) }
         self.selectedRecoveryID = initialRecoveryURLs.first?.path
-        self.languageSelection = LanguageSelection(
-            storedValue: defaults.string(forKey: UserDefaultsKeys.dictationRecoveryLanguage),
-            nilBehavior: .auto
-        )
-        self.selectedEngine = defaults.string(forKey: UserDefaultsKeys.dictationRecoveryEngine)
-        self.selectedModel = defaults.string(forKey: UserDefaultsKeys.dictationRecoveryModel)
+        // Recovery now uses the dictation model and language (Diktat ›
+        // Sprache & Modell); the separate pickers are gone, so settings saved
+        // by older versions would silently win. Drop them.
+        defaults.removeObject(forKey: UserDefaultsKeys.dictationRecoveryLanguage)
+        defaults.removeObject(forKey: UserDefaultsKeys.dictationRecoveryEngine)
+        defaults.removeObject(forKey: UserDefaultsKeys.dictationRecoveryModel)
+        self.languageSelection = .inheritGlobal
+        self.selectedEngine = nil
+        self.selectedModel = nil
         self.isInitialized = true
 
         audioRecordingService.$recoverableRecordingURLs
@@ -175,11 +202,28 @@ final class DictationRecoveryViewModel: ObservableObject {
         modelManager.canUseForTranscription(engine)
     }
 
+    /// The language a transcription actually uses: `.inheritGlobal` resolves
+    /// to the dictation language.
+    var effectiveLanguageSelection: LanguageSelection {
+        guard languageSelection == .inheritGlobal else { return languageSelection }
+        return LanguageSelection(
+            storedValue: defaults.string(forKey: UserDefaultsKeys.selectedLanguage),
+            nilBehavior: .auto
+        )
+    }
+
+    /// Verlauf › „Erneut transkribieren“ for one failed recording.
+    func retranscribe(_ recovery: RecoveryItem) {
+        selectedRecoveryID = recovery.id
+        transcribe()
+    }
+
     func transcribe() {
         guard canTranscribe, let recovery = selectedRecovery else { return }
 
         let recoveryID = recovery.id
         let url = recovery.url
+        let languageSelection = effectiveLanguageSelection
         updateRecovery(id: recoveryID) { item in
             item.state = .loading
             item.errorMessage = nil

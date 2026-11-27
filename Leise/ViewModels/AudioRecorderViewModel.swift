@@ -136,7 +136,9 @@ final class AudioRecorderViewModel: ObservableObject {
     @Published var selectedModel: String? {
         didSet { defaults.set(selectedModel, forKey: UserDefaultsKeys.recorderTranscriptionModel) }
     }
-    @Published var languageSelection: LanguageSelection = .auto
+    /// Transkribieren › Aufnahme › Sprache. `.inheritGlobal` ("Wie beim
+    /// Diktat") follows the dictation language.
+    @Published var languageSelection: LanguageSelection = .inheritGlobal
     @Published var recordings: [RecordingItem] = []
     @Published var errorMessage: String?
     @Published var systemAudioWarningMessage: String?
@@ -171,7 +173,16 @@ final class AudioRecorderViewModel: ObservableObject {
     var selectedEngineSupportedLanguages: [String] {
         resolvedEngine?.capabilities.supportedLanguages.sorted() ?? []
     }
-    var selectedLanguage: String? { languageSelection.requestedLanguage }
+    var selectedLanguage: String? { effectiveLanguageSelection.requestedLanguage }
+    /// The language a transcription actually uses: "Wie beim Diktat" resolves
+    /// to the dictation language at the moment the recording is transcribed.
+    var effectiveLanguageSelection: LanguageSelection {
+        guard languageSelection == .inheritGlobal else { return languageSelection }
+        return LanguageSelection(
+            storedValue: defaults.string(forKey: UserDefaultsKeys.selectedLanguage),
+            nilBehavior: .auto
+        )
+    }
     var outputDirectory: URL { recorderService.recordingsDirectory }
     var outputDirectoryDisplayPath: String {
         (outputDirectory.path as NSString).abbreviatingWithTildeInPath
@@ -269,8 +280,13 @@ final class AudioRecorderViewModel: ObservableObject {
         } else {
             self.livePreviewEnabled = defaults.bool(forKey: UserDefaultsKeys.recorderLivePreviewEnabled)
         }
-        self.selectedEngine = defaults.string(forKey: UserDefaultsKeys.recorderTranscriptionEngine)
-        self.selectedModel = defaults.string(forKey: UserDefaultsKeys.recorderTranscriptionModel)
+        // The model comes from Diktat › Sprache & Modell. The recorder has no
+        // engine or model picker anymore, so overrides saved by older versions
+        // would silently win; drop them.
+        defaults.removeObject(forKey: UserDefaultsKeys.recorderTranscriptionEngine)
+        defaults.removeObject(forKey: UserDefaultsKeys.recorderTranscriptionModel)
+        self.selectedEngine = nil
+        self.selectedModel = nil
 
         recorderService.micDuckingMode = micDuckingMode
         recorderService.trackMode = trackMode
@@ -496,7 +512,7 @@ final class AudioRecorderViewModel: ObservableObject {
                 finalTranscriptionRequest = FinalTranscriptionRequest(
                     outputURL: url,
                     buffer: recorderService.getCurrentBuffer(),
-                    languageSelection: languageSelection,
+                    languageSelection: effectiveLanguageSelection,
                     task: .transcribe,
                     providerId: providerId,
                     modelOverrideId: selectedModel,
@@ -684,7 +700,7 @@ final class AudioRecorderViewModel: ObservableObject {
             dictionaryTermHints: dictionaryService.getTermHints(providerId: providerId),
             engineOverrideId: providerId,
             selectedProviderId: modelManager.selectedProviderId,
-            languageSelection: languageSelection,
+            languageSelection: effectiveLanguageSelection,
             task: .transcribe,
             cloudModelOverride: selectedModel,
             allowLiveTranscription: true,

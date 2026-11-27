@@ -1,44 +1,62 @@
-import SwiftUI
 import LeiseCore
+import SwiftUI
 
-private func dictionaryReplacementDisplayText(_ replacement: String) -> String {
-    replacement.isEmpty ? "\"\"" : replacement
-}
-
+/// Wörterbuch: corrections, terms, filler words and term packs, switched in
+/// the toolbar.
 struct DictionarySettingsView: View {
-    @ObservedObject private var viewModel = ServiceContainer.shared.dictionaryViewModel
-    @ObservedObject private var termPackRegistryService: TermPackRegistryService
-    @ObservedObject private var modelManager: ModelManagerService
+    @Binding var section: DictionaryPageSection
 
-    init() {
-        _termPackRegistryService = ObservedObject(
-            wrappedValue: ServiceContainer.shared.termPackRegistryService
-        )
-        _modelManager = ObservedObject(wrappedValue: ServiceContainer.shared.modelManagerService)
-    }
+    @ObservedObject private var viewModel = ServiceContainer.shared.dictionaryViewModel
+    @ObservedObject private var termPackRegistryService = ServiceContainer.shared.termPackRegistryService
+    @ObservedObject private var modelManager = ServiceContainer.shared.modelManagerService
+    /// The filler-word component writes its list here on every edit.
+    @AppStorage(DictionarySettingsView.fillerWordsKey) private var fillerWordsText = ""
+
+    @State private var showsFillerWordsEditor = false
+    @State private var showsEngineSettings = false
+
+    /// `ComponentSettingsStore(namespace: "filler-words")`, key "words".
+    static let fillerWordsKey = "component.filler-words.words"
 
     var body: some View {
-        VStack(spacing: 0) {
-            dictionaryHeader
-
-            switch viewModel.filterTab {
-            case .termPacks:
-                termPacksView
+        SettingsPage(.dictionary) {
+            switch section {
+            case .corrections:
+                correctionsSection
+            case .terms:
+                termsSection
             case .fillerWords:
-                fillerWordsView
-            case .all, .terms, .corrections:
-                if viewModel.entries.isEmpty {
-                    emptyState
-                } else {
-                    dictionaryEntriesView
-                }
+                fillerWordsSection
+            case .termPacks:
+                termPacksSections
             }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-        .padding(.vertical, 8)
-        .padding(.horizontal, 8)
+        .toolbar {
+            ToolbarItem(placement: .principal) {
+                Picker(String(localized: "Section"), selection: $section) {
+                    ForEach(DictionaryPageSection.allCases) { section in
+                        Text(section.title).tag(section)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+                .fixedSize()
+            }
+            ToolbarItem(placement: .primaryAction) {
+                addMenu
+            }
+        }
         .sheet(isPresented: $viewModel.isEditing) {
             DictionaryEditorSheet(viewModel: viewModel)
+        }
+        .sheet(isPresented: $showsFillerWordsEditor) {
+            FillerWordsEditorSheet()
+        }
+        .sheet(isPresented: $showsEngineSettings, onDismiss: {
+            // Vocabulary boosting changes don't publish an engine state change.
+            modelManager.objectWillChange.send()
+        }) {
+            EngineSettingsSheet()
         }
         .alert(String(localized: "Error"), isPresented: Binding(
             get: { viewModel.error != nil },
@@ -58,795 +76,517 @@ struct DictionarySettingsView: View {
         }
     }
 
-    private var dictionaryHeader: some View {
-        HStack {
-            Picker("", selection: $viewModel.filterTab) {
-                Text(String(localized: "All")).tag(DictionaryViewModel.FilterTab.all)
-                Text(String(localized: "Terms")).tag(DictionaryViewModel.FilterTab.terms)
-                Text(String(localized: "Corrections")).tag(DictionaryViewModel.FilterTab.corrections)
-                Text(String(localized: "Filler Words")).tag(DictionaryViewModel.FilterTab.fillerWords)
-                Text(String(localized: "Term Packs")).tag(DictionaryViewModel.FilterTab.termPacks)
+    // MARK: Toolbar
+
+    private var addMenu: some View {
+        Menu {
+            Button(String(localized: "Add Correction…")) {
+                section = .corrections
+                viewModel.startCreating(type: .correction)
             }
-            .pickerStyle(.segmented)
-            .frame(width: 460)
+            Button(String(localized: "Add Term…")) {
+                section = .terms
+                viewModel.startCreating(type: .term)
+            }
+            Button(String(localized: "Edit Filler Words…")) {
+                section = .fillerWords
+                showsFillerWordsEditor = true
+            }
+            Divider()
+            Button(String(localized: "Import Dictionary…")) {
+                viewModel.importDictionary()
+            }
+            Button(String(localized: "Export Dictionary…")) {
+                viewModel.exportDictionary()
+            }
+            .disabled(viewModel.entries.isEmpty)
+        } label: {
+            Label(String(localized: "Add"), systemImage: "plus")
+        }
+        .help(String(localized: "Add a correction or term"))
+    }
 
-            Spacer()
+    // MARK: Korrekturen
 
-            if viewModel.filterTab != .termPacks && viewModel.filterTab != .fillerWords {
-                Button {
+    @ViewBuilder
+    private var correctionsSection: some View {
+        let corrections = viewModel.rows(of: .correction)
+        Section {
+            if corrections.isEmpty {
+                DictionaryEmptyRow(
+                    title: String(localized: "No corrections yet"),
+                    message: String(localized: "A correction replaces one spelling with another after every dictation, for example “Kesler” with “Kessler”."),
+                    actionTitle: String(localized: "Add Correction…")
+                ) {
                     viewModel.startCreating(type: .correction)
-                } label: {
-                    Label(String(localized: "Correction"), systemImage: "plus")
                 }
-                Button {
-                    viewModel.startCreating(type: .term)
-                } label: {
-                    Label(String(localized: "Term"), systemImage: "plus")
-                }
-            }
-
-            if viewModel.filterTab != .fillerWords {
-                Menu {
-                    Button {
-                        viewModel.exportDictionary()
-                    } label: {
-                        Label(String(localized: "Export..."), systemImage: "square.and.arrow.up")
-                    }
-                    .disabled(viewModel.entries.isEmpty)
-
-                    Button {
-                        viewModel.importDictionary()
-                    } label: {
-                        Label(String(localized: "Import..."), systemImage: "square.and.arrow.down")
-                    }
-                } label: {
-                    Image(systemName: "ellipsis.circle")
-                }
-                .menuStyle(.borderlessButton)
-                .frame(width: 28)
-            }
-        }
-        .padding(.horizontal, 4)
-        .padding(.bottom, 4)
-    }
-
-    private var fillerWordsView: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 12) {
-                Text(String(localized: "Choose which filler words Leise removes automatically after transcription."))
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
-
-                ServiceContainer.shared.builtInComponents.fillerCleanupSettingsView
-                    .frame(maxWidth: .infinity, alignment: .topLeading)
-                    .background(
-                        RoundedRectangle(cornerRadius: 12)
-                            .fill(.secondary.opacity(0.055))
+            } else {
+                ForEach(corrections) { row in
+                    CorrectionRow(
+                        row: row,
+                        setEnabled: { viewModel.setEntryEnabled(id: row.id, enabled: $0) },
+                        edit: { viewModel.startEditingEntry(id: row.id) },
+                        delete: { viewModel.deleteEntry(id: row.id) }
                     )
+                }
             }
-            .padding(.horizontal, 2)
-            .padding(.top, 8)
-            .frame(maxWidth: 820, alignment: .topLeading)
+        } header: {
+            Text(SettingsRow.corrections.title)
+        } footer: {
+            if !corrections.isEmpty {
+                Text(String(localized: "Leise replaces these spellings after every dictation."))
+            }
         }
     }
 
-    private var dictionaryEntriesView: some View {
-        ScrollView {
-            LazyVStack(spacing: 8) {
-                if !engineSupportRows.isEmpty {
-                    DictionaryEngineSupportSection(rows: engineSupportRows)
-                }
+    // MARK: Begriffe
 
-                if viewModel.filteredEntryRows.isEmpty {
-                    VStack(spacing: 8) {
-                        Image(systemName: "line.3.horizontal.decrease.circle")
-                            .font(.system(size: 32))
-                            .foregroundStyle(.secondary)
-                        Text(String(localized: "No entries for this filter"))
-                            .foregroundStyle(.secondary)
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 48)
-                } else {
-                    ForEach(viewModel.filteredEntryRows) { row in
-                        DictionaryCardView(
-                            row: row,
-                            setEntryEnabled: { viewModel.setEntryEnabled(id: row.id, enabled: $0) },
-                            editEntry: { viewModel.startEditingEntry(id: row.id) },
-                            deleteEntry: { viewModel.deleteEntry(id: row.id) }
-                        )
-                    }
-                }
-            }
-            .padding(.horizontal, 2)
-        }
-    }
-
-    private var emptyState: some View {
-        VStack {
-            Spacer()
-            VStack(spacing: 12) {
-                Image(systemName: "character.book.closed")
-                    .font(.system(size: 40))
-                    .foregroundStyle(.secondary)
-                Text(String(localized: "No dictionary entries"))
-                    .font(.headline)
-                    .foregroundStyle(.secondary)
-                Text(String(localized: "Terms help only on engines that support transcription-time biasing. Corrections always run after transcription and apply across engines."))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-                    .frame(maxWidth: 320)
-                HStack(spacing: 12) {
-                    Button(String(localized: "Add Term")) {
-                        viewModel.startCreating(type: .term)
-                    }
-                    Button(String(localized: "Add Correction")) {
-                        viewModel.startCreating(type: .correction)
-                    }
-                    .buttonStyle(.borderedProminent)
-                }
-
-                Divider()
-                    .padding(.vertical, 8)
-                    .frame(maxWidth: 200)
-
-                Button {
-                    viewModel.filterTab = .termPacks
-                } label: {
-                    Label(String(localized: "Browse Term Packs"), systemImage: "shippingbox")
-                }
-                .buttonStyle(.bordered)
-
-                Text(String(localized: "Pre-built collections of technical terms for common domains"))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-
-                Button {
-                    viewModel.importDictionary()
-                } label: {
-                    Label(String(localized: "Import Dictionary..."), systemImage: "square.and.arrow.down")
-                }
-                .buttonStyle(.bordered)
-            }
-            Spacer()
-        }
-    }
-
-    private var termPacksView: some View {
-        ScrollView {
-            LazyVStack(alignment: .leading, spacing: 10) {
-                // Built-in Packs
-                ForEach(viewModel.visibleBuiltInPacks) { pack in
-                    TermPackCardView(pack: pack, viewModel: viewModel)
-                }
-
-                // Community Packs
-                communityPacksSection
-            }
-            .padding(.horizontal, 2)
-        }
+    private var isVocabularyBoostingOn: Bool {
+        modelManager.engine(for: modelManager.selectedProviderId)?.capabilities.dictionaryHints == .available
     }
 
     @ViewBuilder
-    private var communityPacksSection: some View {
+    private var termsSection: some View {
+        let terms = viewModel.rows(of: .term)
+        Section {
+            if terms.isEmpty {
+                DictionaryEmptyRow(
+                    title: String(localized: "No terms yet"),
+                    message: String(localized: "Terms are names and special words Leise should know, such as “Parakeet” or your colleagues’ names."),
+                    actionTitle: String(localized: "Add Term…")
+                ) {
+                    viewModel.startCreating(type: .term)
+                }
+            } else {
+                FlowLayout(spacing: LeiseSpacing.s) {
+                    ForEach(terms) { row in
+                        TermChip(
+                            row: row,
+                            edit: { viewModel.startEditingEntry(id: row.id) },
+                            setEnabled: { viewModel.setEntryEnabled(id: row.id, enabled: $0) },
+                            delete: { viewModel.deleteEntry(id: row.id) }
+                        )
+                    }
+                }
+                .padding(.vertical, LeiseSpacing.xs)
+            }
+
+            LabeledContent {
+                HStack(spacing: LeiseSpacing.m) {
+                    Text(isVocabularyBoostingOn ? String(localized: "On") : String(localized: "Off"))
+                        .foregroundStyle(.secondary)
+                    Button(String(localized: "Set Up…")) {
+                        showsEngineSettings = true
+                    }
+                }
+            } label: {
+                SettingsRowLabel(
+                    title: SettingsRow.vocabularyBoosting.title,
+                    subtitle: String(localized: "Helps with names and special words."),
+                    info: String(localized: "Leise weights these words more strongly while recognizing. A small extra model loads once for this.")
+                )
+            }
+            .settingsRow(.vocabularyBoosting)
+        } header: {
+            Text(SettingsRow.terms.title)
+        }
+    }
+
+    // MARK: Füllwörter
+
+    private var fillerWords: [String] {
+        var seen = Set<String>()
+        return fillerWordsText
+            .components(separatedBy: CharacterSet(charactersIn: "\n,;"))
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty && seen.insert($0.lowercased()).inserted }
+    }
+
+    @ViewBuilder
+    private var fillerWordsSection: some View {
+        let words = fillerWords
+        Section {
+            if words.isEmpty {
+                Text(String(localized: "No filler words. Leise leaves your text as it is."))
+                    .foregroundStyle(.secondary)
+            } else {
+                FlowLayout(spacing: LeiseSpacing.s) {
+                    ForEach(words, id: \.self) { word in
+                        WordChip(text: word)
+                    }
+                }
+                .padding(.vertical, LeiseSpacing.xs)
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel(String(localized: "Filler words: \(words.formatted(.list(type: .and)))"))
+            }
+
+            LabeledContent {
+                Button(String(localized: "Edit…")) {
+                    showsFillerWordsEditor = true
+                }
+            } label: {
+                SettingsRowLabel(
+                    title: SettingsRow.fillerWordList.title,
+                    subtitle: String(localized: "Add words, or restore the default list.")
+                )
+            }
+            .settingsRow(.fillerWordList)
+        } header: {
+            Text(String(localized: "Filler Words"))
+        } footer: {
+            Text(AttributedString(localized: "Applies when [“Remove filler words”](leise-settings://dictation/filler-words) is on under Dictation."))
+                .environment(\.openURL, OpenURLAction { _ in
+                    MainActor.assumeIsolated {
+                        SettingsNavigationCoordinator.shared.show(.removeFillerWords)
+                    }
+                    return .handled
+                })
+        }
+    }
+
+    // MARK: Pakete
+
+    @ViewBuilder
+    private var termPacksSections: some View {
+        Section {
+            ForEach(viewModel.visibleBuiltInPacks) { pack in
+                TermPackRow(pack: pack, viewModel: viewModel)
+            }
+        } header: {
+            Text(String(localized: "Term Packs"))
+        } footer: {
+            Text(String(localized: "Packs add ready-made term lists. You can remove them at any time."))
+        }
+
         Section {
             switch termPackRegistryService.fetchState {
             case .idle, .loading:
-                HStack {
-                    Spacer()
+                HStack(spacing: LeiseSpacing.s) {
                     ProgressView()
-                    Text(String(localized: "Loading community packs..."))
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    Spacer()
-                }
-                .padding(.vertical, 12)
-
-            case .error(let message):
-                HStack {
-                    Spacer()
-                    VStack(spacing: 8) {
-                        Text(String(localized: "Failed to load community packs."))
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                        Text(message)
-                            .font(.caption2)
-                            .foregroundStyle(.tertiary)
-                            .lineLimit(2)
-                        Button(String(localized: "Retry")) {
-                            Task { await termPackRegistryService.fetchRegistry(force: true) }
-                        }
-                        .buttonStyle(.bordered)
                         .controlSize(.small)
-                    }
-                    Spacer()
+                    Text(String(localized: "Loading more packs…"))
+                        .foregroundStyle(.secondary)
                 }
-                .padding(.vertical, 12)
-
+            case .error(let message):
+                LabeledContent {
+                    Button(String(localized: "Retry")) {
+                        Task { await termPackRegistryService.fetchRegistry(force: true) }
+                    }
+                } label: {
+                    StatusLabel(kind: .error, text: String(localized: "More packs could not be loaded."))
+                        .help(message)
+                }
             case .loaded:
                 if viewModel.visibleCommunityPacks.isEmpty {
-                    HStack {
-                        Spacer()
-                        Text(String(localized: "No community packs available yet."))
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                        Spacer()
-                    }
-                    .padding(.vertical, 12)
+                    Text(String(localized: "No more packs available yet."))
+                        .foregroundStyle(.secondary)
                 } else {
                     ForEach(viewModel.visibleCommunityPacks) { pack in
-                        TermPackCardView(pack: pack, viewModel: viewModel)
+                        TermPackRow(pack: pack, viewModel: viewModel)
                     }
                 }
             }
         } header: {
-            Text(String(localized: "Community Packs"))
-                .font(.callout)
-                .fontWeight(.semibold)
-                .foregroundStyle(.secondary)
-                .padding(.top, 16)
-                .padding(.bottom, 4)
+            Text(String(localized: "More Packs"))
         }
         .task {
             await termPackRegistryService.fetchRegistry()
         }
     }
-
-    private var engineSupportRows: [DictionaryEngineSupportRow] {
-        modelManager.availableEngines
-            .map {
-                DictionaryEngineSupportRow(
-                    engineName: $0.displayName,
-                    support: $0.capabilities.dictionaryHints
-                )
-            }
-            .sorted { $0.engineName.localizedCaseInsensitiveCompare($1.engineName) == .orderedAscending }
-    }
 }
 
-private struct DictionaryEngineSupportRow: Identifiable {
-    let engineName: String
-    let support: DictionaryHintSupport
+// MARK: - Rows
 
-    var id: String { engineName }
-
-    var badgeText: LocalizedStringKey {
-        switch support {
-        case .available:
-            return "Terms + Corrections"
-        case .requiresSetting:
-            return "Terms requires component setting"
-        case .unavailable:
-            return "Corrections only"
-        }
-    }
-
-    var tint: Color {
-        switch support {
-        case .available:
-            return .accentColor
-        case .requiresSetting:
-            return .orange
-        case .unavailable:
-            return .secondary
-        }
-    }
-
-    var detailText: LocalizedStringKey? {
-        switch support {
-        case .available:
-            return nil
-        case .requiresSetting:
-            if engineName == "Parakeet" {
-                return "Terms work only when Vocabulary Boosting is enabled in the Parakeet settings."
-            }
-            return "This engine needs an extra setting before Terms are applied."
-        case .unavailable:
-            if engineName == "Cohere" {
-                return "Cohere currently ignores Terms. Dictionary Corrections still apply after transcription."
-            }
-            return "This engine currently uses Dictionary Corrections only."
-        }
-    }
-}
-
-private struct DictionaryEngineSupportSection: View {
-    let rows: [DictionaryEngineSupportRow]
+/// An empty section that says what belongs here and offers the first step.
+private struct DictionaryEmptyRow: View {
+    let title: String
+    let message: String
+    let actionTitle: String
+    let action: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text(String(localized: "Engine Support"))
-                    .font(.callout)
-                    .fontWeight(.semibold)
-                Text(String(localized: "Terms depend on engine support. Corrections always run after transcription."))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-            .padding(.horizontal, 10)
-            .padding(.top, 10)
-
-            VStack(spacing: 8) {
-                ForEach(rows) { row in
-                    VStack(alignment: .leading, spacing: 4) {
-                        HStack(spacing: 8) {
-                            Text(row.engineName)
-                                .font(.callout)
-                                .fontWeight(.medium)
-                            Spacer()
-                            Text(row.badgeText)
-                                .font(.caption)
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 4)
-                                .background(row.tint.opacity(0.14))
-                                .foregroundStyle(row.tint)
-                                .clipShape(RoundedRectangle(cornerRadius: 5, style: .continuous))
-                        }
-
-                        if let detailText = row.detailText {
-                            Text(detailText)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 8)
-                    .background(
-                        RoundedRectangle(cornerRadius: 8, style: .continuous)
-                            .fill(Color(NSColor.controlBackgroundColor))
-                    )
-                }
-            }
+        VStack(alignment: .leading, spacing: LeiseSpacing.s) {
+            Text(title)
+                .font(.headline)
+            Text(message)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+            Button(actionTitle, action: action)
+                .padding(.top, LeiseSpacing.xs)
         }
+        .padding(.vertical, LeiseSpacing.xs)
     }
 }
 
-// MARK: - Term Pack Card
+/// "Kesler → Kessler" with its switch.
+private struct CorrectionRow: View {
+    let row: DictionaryEntryRow
+    let setEnabled: @MainActor (Bool) -> Void
+    let edit: () -> Void
+    let delete: () -> Void
 
-private struct TermPackCardView: View {
+    private var replacement: String { row.replacementDisplayText ?? "" }
+
+    private var accessibilityTitle: String {
+        String(localized: "Replace “\(row.original)” with “\(replacement)”")
+    }
+
+    var body: some View {
+        HStack(spacing: LeiseSpacing.m) {
+            Button(action: edit) {
+                HStack(spacing: LeiseSpacing.s) {
+                    Text(row.original)
+                        .foregroundStyle(.secondary)
+                    Image(systemName: "arrow.right")
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
+                    Text(replacement)
+                        .foregroundStyle(.primary)
+                    if let origin {
+                        Text(origin)
+                            .font(.subheadline)
+                            .foregroundStyle(.tertiary)
+                    }
+                }
+                .lineLimit(1)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(accessibilityTitle)
+            .accessibilityHint(String(localized: "Opens the correction"))
+
+            Toggle(isOn: Binding(get: { row.isEnabled }, set: setEnabled)) {
+                Text(accessibilityTitle)
+            }
+            .toggleStyle(.switch)
+            .labelsHidden()
+        }
+        .contextMenu {
+            Button(String(localized: "Edit…"), action: edit)
+            Divider()
+            Button(String(localized: "Delete"), role: .destructive, action: delete)
+        }
+    }
+
+    private var origin: String? {
+        if let packName = row.packName {
+            return String(localized: "from \(packName)")
+        }
+        return row.source == .autoLearned ? String(localized: "learned") : nil
+    }
+}
+
+/// A term as a chip: click to edit, right-click for more.
+private struct TermChip: View {
+    let row: DictionaryEntryRow
+    let edit: () -> Void
+    let setEnabled: @MainActor (Bool) -> Void
+    let delete: () -> Void
+
+    var body: some View {
+        Button(action: edit) {
+            WordChip(text: row.original, isDimmed: !row.isEnabled)
+        }
+        .buttonStyle(.plain)
+        .contextMenu {
+            Button(String(localized: "Edit…"), action: edit)
+            Button(row.isEnabled ? String(localized: "Turn Off") : String(localized: "Turn On")) {
+                setEnabled(!row.isEnabled)
+            }
+            Divider()
+            Button(String(localized: "Delete"), role: .destructive, action: delete)
+        }
+        .accessibilityLabel(row.original)
+        .accessibilityValue(row.isEnabled ? "" : String(localized: "Off"))
+        .accessibilityHint(String(localized: "Opens the term"))
+        .accessibilityAction(named: Text(row.isEnabled ? String(localized: "Turn Off") : String(localized: "Turn On"))) {
+            setEnabled(!row.isEnabled)
+        }
+        .accessibilityAction(named: Text(String(localized: "Delete")), delete)
+    }
+}
+
+/// A word in a capsule, for terms and filler words.
+private struct WordChip: View {
+    let text: String
+    var isDimmed = false
+
+    @Environment(\.colorSchemeContrast) private var contrast
+
+    var body: some View {
+        Text(text)
+            .strikethrough(isDimmed)
+            .foregroundStyle(isDimmed ? .secondary : .primary)
+            .padding(.horizontal, LeiseSpacing.s)
+            .padding(.vertical, LeiseSpacing.xs)
+            .background(contrast == .increased ? AnyShapeStyle(.tertiary) : AnyShapeStyle(.quaternary), in: Capsule())
+    }
+}
+
+/// A term pack with Installieren or Entfernen.
+private struct TermPackRow: View {
     let pack: TermPack
     @ObservedObject var viewModel: DictionaryViewModel
-    @State private var isExpanded = false
-    @State private var isHovering = false
 
-    private var isActivated: Bool {
-        viewModel.isPackActivated(pack)
-    }
-
-    private var showUpdate: Bool {
-        isActivated && viewModel.hasUpdate(for: pack)
-    }
+    private var isInstalled: Bool { viewModel.isPackActivated(pack) }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            HStack(spacing: 10) {
-                Image(systemName: pack.icon)
-                    .font(.title3)
-                    .foregroundStyle(isActivated ? Color.accentColor : .secondary)
-                    .frame(width: 28)
-
-                VStack(alignment: .leading, spacing: 2) {
-                    HStack(spacing: 6) {
-                        Text(pack.name)
-                            .font(.callout)
-                            .fontWeight(.medium)
-
-                        if showUpdate {
-                            Text(String(localized: "Update Available"))
-                                .font(.caption2)
-                                .padding(.horizontal, 6)
-                                .padding(.vertical, 2)
-                                .background(Color.orange.opacity(0.15))
-                                .foregroundStyle(.orange)
-                                .clipShape(RoundedRectangle(cornerRadius: 4))
+        LabeledContent {
+            HStack(spacing: LeiseSpacing.m) {
+                if isInstalled {
+                    StatusLabel(kind: .ready, text: String(localized: "Installed"))
+                    if viewModel.hasUpdate(for: pack) {
+                        Button(String(localized: "Update")) {
+                            withLeiseAnimation(LeiseMotion.ui) { viewModel.updatePack(pack) }
                         }
                     }
-
-                    HStack(spacing: 4) {
-                        Text(pack.description)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .lineLimit(1)
-
-                        if pack.source == .community, let author = pack.author {
-                            Text("-")
-                                .font(.caption)
-                                .foregroundStyle(.tertiary)
-                            Text(String(localized: "by \(author)"))
-                                .font(.caption)
-                                .foregroundStyle(.tertiary)
-                        }
+                    Button(String(localized: "Remove")) {
+                        withLeiseAnimation(LeiseMotion.ui) { viewModel.deactivatePack(pack) }
                     }
-                }
-
-                Spacer()
-
-                Text(String(localized: "\(pack.entryCount) entries"))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-
-                if isActivated && viewModel.installedEntryCount(for: pack) != pack.entryCount {
-                    Text(String(localized: "\(viewModel.installedEntryCount(for: pack)) installed"))
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-
-                if showUpdate {
-                    Button(String(localized: "Update")) {
-                        viewModel.updatePack(pack)
-                    }
-                    .controlSize(.small)
-                    .buttonStyle(.bordered)
-                }
-
-                if isActivated {
-                    Label(String(localized: "Installed"), systemImage: "checkmark.circle.fill")
-                        .font(.caption)
-                        .foregroundStyle(Color.accentColor)
-
-                    Button(String(localized: "Remove"), role: .destructive) {
-                        viewModel.deactivatePack(pack)
-                    }
-                    .controlSize(.small)
-                    .buttonStyle(.bordered)
                     .help(String(localized: "Remove this pack and its unchanged entries"))
                     .accessibilityLabel(String(localized: "Remove \(pack.name) pack"))
                 } else {
                     Button(String(localized: "Install")) {
-                        viewModel.activatePack(pack)
+                        withLeiseAnimation(LeiseMotion.ui) { viewModel.activatePack(pack) }
                     }
-                    .controlSize(.small)
-                    .buttonStyle(.borderedProminent)
                     .accessibilityLabel(String(localized: "Install \(pack.name) pack"))
                 }
-
-                Button {
-                    withAnimation(.easeInOut(duration: 0.2)) {
-                        isExpanded.toggle()
-                    }
-                } label: {
-                    Image(systemName: "chevron.right")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .rotationEffect(.degrees(isExpanded ? 90 : 0))
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel(String(localized: "Show terms for \(pack.name)"))
-                .accessibilityValue(isExpanded ? String(localized: "Expanded") : String(localized: "Collapsed"))
             }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 8)
-
-            if isExpanded {
-                Divider()
-                    .padding(.horizontal, 10)
-
-                VStack(alignment: .leading, spacing: 8) {
-                    if !pack.terms.isEmpty {
-                        FlowLayout(spacing: 6) {
-                            ForEach(pack.terms, id: \.self) { term in
-                                Text(term)
-                                    .font(.caption)
-                                    .padding(.horizontal, 8)
-                                    .padding(.vertical, 4)
-                                    .background(Color.accentColor.opacity(0.1))
-                                    .clipShape(RoundedRectangle(cornerRadius: 4))
-                            }
-                        }
-                    }
-
-                    if !pack.corrections.isEmpty {
-                        FlowLayout(spacing: 6) {
-                            ForEach(pack.corrections, id: \.self) { correction in
-                                HStack(spacing: 4) {
-                                    Text(correction.original)
-                                        .strikethrough()
-                                        .foregroundStyle(.secondary)
-                                    Image(systemName: "arrow.right")
-                                        .font(.caption2)
-                                        .foregroundStyle(.tertiary)
-                                    Text(dictionaryReplacementDisplayText(correction.replacement))
-                                }
-                                .font(.caption)
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 4)
-                                .background(Color.orange.opacity(0.1))
-                                .clipShape(RoundedRectangle(cornerRadius: 4))
-                            }
-                        }
-                    }
-                }
-                .padding(10)
-            }
-        }
-        .background(
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .fill(Color(NSColor.controlBackgroundColor))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .strokeBorder(isHovering ? Color.accentColor.opacity(0.3) : Color.primary.opacity(0.06), lineWidth: 1)
-        )
-        .onHover { hovering in
-            isHovering = hovering
-        }
-    }
-}
-
-// MARK: - Dictionary Card
-
-private struct DictionaryCardView: View {
-    let row: DictionaryEntryRow
-    let setEntryEnabled: (Bool) -> Void
-    let editEntry: () -> Void
-    let deleteEntry: () -> Void
-
-    var body: some View {
-        HStack(spacing: 10) {
-            Text(row.type.displayName)
-                .font(.caption)
-                .fontWeight(.medium)
-                .foregroundStyle(row.type == .correction ? Color.orange : Color.accentColor)
-                .padding(.horizontal, 8)
-                .padding(.vertical, 4)
-                .background((row.type == .correction ? Color.orange : Color.accentColor).opacity(0.12))
-                .clipShape(RoundedRectangle(cornerRadius: 5))
-
-            if row.type == .correction, let replacement = row.replacementDisplayText {
-                Text(row.original)
-                    .font(.callout)
-                    .strikethrough()
-                    .foregroundStyle(.secondary)
-
-                Image(systemName: "arrow.right")
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-
-                Text(replacement)
-                    .font(.callout)
-                    .fontWeight(.medium)
-            } else {
-                Text(row.original)
-                    .font(.callout)
-                    .fontWeight(.medium)
-
-                DictionaryBoostingBadge(
-                    label: row.termBoostingLabel,
-                    value: row.formattedCtcMinSimilarity
+        } label: {
+            Label {
+                SettingsRowLabel(
+                    title: pack.name,
+                    subtitle: String(localized: "\(pack.entryCount) entries")
                 )
-            }
-
-            if row.caseSensitive {
-                Text("Aa")
-                    .font(.caption2)
-                    .padding(.horizontal, 5)
-                    .padding(.vertical, 2)
-                    .background(Color.secondary.opacity(0.12))
-                    .foregroundStyle(.secondary)
-                    .clipShape(RoundedRectangle(cornerRadius: 3))
-            }
-
-            if let packName = row.packName {
-                Text(String(localized: "From \(packName)"))
-                    .font(.caption2)
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 2)
-                    .background(Color.secondary.opacity(0.1))
-                    .foregroundStyle(.secondary)
-                    .clipShape(RoundedRectangle(cornerRadius: 3))
-            } else if row.source == .autoLearned {
-                Text(String(localized: "Learned"))
-                    .font(.caption2)
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 2)
-                    .background(Color.secondary.opacity(0.1))
-                    .foregroundStyle(.secondary)
-                    .clipShape(RoundedRectangle(cornerRadius: 3))
-            }
-
-            Spacer()
-
-            Toggle("", isOn: Binding(
-                get: { row.isEnabled },
-                set: { setEntryEnabled($0) }
-            ))
-            .toggleStyle(.switch)
-            .labelsHidden()
-            .accessibilityLabel(String(localized: "Enable \(row.original)"))
-            .onTapGesture {}
-
-            Button {
-                editEntry()
-            } label: {
-                Image(systemName: "pencil")
-            }
-            .buttonStyle(.borderless)
-            .foregroundStyle(.secondary)
-            .help(String(localized: "Edit"))
-            .accessibilityLabel(String(localized: "Edit \(row.original)"))
-
-            Button(role: .destructive) {
-                deleteEntry()
-            } label: {
-                Image(systemName: "trash")
-            }
-            .buttonStyle(.borderless)
-            .help(String(localized: "Remove from dictionary"))
-            .accessibilityLabel(String(localized: "Remove \(row.original) from dictionary"))
-        }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 8)
-        .background(
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .fill(Color(NSColor.controlBackgroundColor))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .strokeBorder(Color.primary.opacity(0.06), lineWidth: 1)
-        )
-        .contentShape(Rectangle())
-        .onTapGesture {
-            editEntry()
-        }
-        .contextMenu {
-            Button(String(localized: "Edit")) {
-                editEntry()
-            }
-            Divider()
-            Button(String(localized: "Delete"), role: .destructive) {
-                deleteEntry()
+            } icon: {
+                Image(systemName: pack.icon)
+                    .foregroundStyle(LeiseColor.tint)
+                    .frame(width: 20)
             }
         }
     }
 }
 
-private struct DictionaryBoostingBadge: View {
-    let label: String
-    let value: String
+// MARK: - Sheets
+
+/// The filler-word component's own editor, with "Standard wiederherstellen".
+private struct FillerWordsEditorSheet: View {
+    @Environment(\.dismiss) private var dismiss
 
     var body: some View {
-        HStack(spacing: 4) {
-            Image(systemName: "slider.horizontal.3")
-                .font(.caption2)
-            Text(value.isEmpty ? label : "\(label) \(value)")
-                .font(.caption2)
-                .lineLimit(1)
+        VStack(spacing: 0) {
+            ServiceContainer.shared.builtInComponents.fillerCleanupSettingsView
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            Divider()
+            HStack {
+                Spacer()
+                Button(String(localized: "Done")) { dismiss() }
+                    .keyboardShortcut(.defaultAction)
+            }
+            .padding(LeiseSpacing.l)
         }
-        .foregroundStyle(.secondary)
-        .padding(.horizontal, 6)
-        .padding(.vertical, 3)
-        .background(Color.secondary.opacity(0.10))
-        .clipShape(RoundedRectangle(cornerRadius: 4))
+        .frame(width: 460, height: 460)
     }
 }
-
-// MARK: - Editor Sheet
 
 private struct DictionaryEditorSheet: View {
     @ObservedObject var viewModel: DictionaryViewModel
     @Environment(\.dismiss) private var dismiss
     @FocusState private var focusedField: Field?
 
-    enum Field {
-        case original, replacement
+    private enum Field {
+        case original
+        case replacement
+    }
+
+    private var isTerm: Bool { viewModel.editType == .term }
+
+    private var title: String {
+        switch (viewModel.isCreatingNew, isTerm) {
+        case (true, true): String(localized: "New Term")
+        case (true, false): String(localized: "New Correction")
+        case (false, true): String(localized: "Edit Term")
+        case (false, false): String(localized: "Edit Correction")
+        }
     }
 
     var body: some View {
         VStack(spacing: 0) {
-            HStack {
-                Text(viewModel.isCreatingNew
-                     ? (viewModel.editType == .term ? String(localized: "New Term") : String(localized: "New Correction"))
-                     : (viewModel.editType == .term ? String(localized: "Edit Term") : String(localized: "Edit Correction")))
-                    .font(.headline)
-                Spacer()
-            }
-            .padding()
-            .background(Color(NSColor.windowBackgroundColor))
-
-            Divider()
-
-            VStack(alignment: .leading, spacing: 20) {
-                Text(viewModel.editType == .term
-                     ? String(localized: "Terms are sent only to engines that support transcription-time biasing")
-                     : String(localized: "Corrections replace text after transcription"))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-
-                GroupBox(viewModel.editType == .term ? String(localized: "Term") : String(localized: "Correction")) {
-                    VStack(alignment: .leading, spacing: 12) {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(viewModel.editType == .term ? String(localized: "Term") : String(localized: "Wrong Text"))
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                            TextField(
-                                viewModel.editType == .term
-                                    ? String(localized: "e.g. Kubernetes")
-                                    : String(localized: "e.g. kubernetees"),
-                                text: $viewModel.editOriginal
-                            )
-                            .textFieldStyle(.roundedBorder)
+            Form {
+                Section {
+                    if isTerm {
+                        TextField(String(localized: "Term"), text: $viewModel.editOriginal, prompt: Text(String(localized: "e.g. Kubernetes")))
                             .focused($focusedField, equals: .original)
-                        }
-
-                        if viewModel.editType == .correction {
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(String(localized: "Correct Text"))
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                                TextField(String(localized: "e.g. Kubernetes"), text: $viewModel.editReplacement)
-                                    .textFieldStyle(.roundedBorder)
-                                    .focused($focusedField, equals: .replacement)
-                            }
-                        }
-
-                        Toggle(String(localized: "Case sensitive"), isOn: $viewModel.editCaseSensitive)
+                    } else {
+                        TextField(String(localized: "Recognized as"), text: $viewModel.editOriginal, prompt: Text(String(localized: "e.g. kubernetees")))
+                            .focused($focusedField, equals: .original)
+                        TextField(String(localized: "Replace with"), text: $viewModel.editReplacement, prompt: Text(String(localized: "e.g. Kubernetes")))
+                            .focused($focusedField, equals: .replacement)
                     }
-                    .padding(.vertical, 8)
+                    Toggle(String(localized: "Case sensitive"), isOn: $viewModel.editCaseSensitive)
+                } header: {
+                    Text(title)
+                } footer: {
+                    Text(isTerm
+                        ? String(localized: "Leise prefers terms while recognizing when “Prefer terms when recognizing” is on.")
+                        : String(localized: "Corrections replace text after transcription."))
                 }
 
-                if viewModel.editType == .term {
-                    GroupBox(String(localized: "Boosting")) {
-                        VStack(alignment: .leading, spacing: 12) {
-                            Picker(String(localized: "Boosting"), selection: $viewModel.editTermBoostingMode) {
-                                ForEach(DictionaryViewModel.TermBoostingMode.allCases) { mode in
-                                    Text(mode.displayName).tag(mode)
-                                }
+                if isTerm {
+                    Section {
+                        Picker(String(localized: "Boosting"), selection: $viewModel.editTermBoostingMode) {
+                            ForEach(DictionaryViewModel.TermBoostingMode.allCases) { mode in
+                                Text(mode.displayName).tag(mode)
                             }
-                            .pickerStyle(.segmented)
-                            .labelsHidden()
+                        }
 
-                            if viewModel.editTermBoostingMode == .advanced {
-                                HStack(spacing: 10) {
-                                    Text(String(localized: "Threshold"))
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
-
+                        if viewModel.editTermBoostingMode == .advanced {
+                            LabeledContent(String(localized: "Threshold")) {
+                                HStack(spacing: LeiseSpacing.s) {
                                     Slider(
                                         value: $viewModel.editAdvancedCtcMinSimilarity,
                                         in: DictionaryViewModel.minimumAdvancedCtcMinSimilarity...DictionaryViewModel.maximumAdvancedCtcMinSimilarity
                                     )
-
-                                    Text(String(format: "%.2f", viewModel.editAdvancedCtcMinSimilarity))
-                                        .font(.caption)
+                                    .frame(width: 160)
+                                    .accessibilityLabel(String(localized: "Threshold"))
+                                    Text(viewModel.editAdvancedCtcMinSimilarity.formatted(.number.precision(.fractionLength(2))))
                                         .monospacedDigit()
-                                        .frame(width: 36, alignment: .trailing)
                                         .foregroundStyle(.secondary)
+                                        .frame(width: 36, alignment: .trailing)
                                 }
                             }
                         }
-                        .padding(.vertical, 8)
                     }
                 }
             }
-            .padding()
-
-            Spacer()
+            .formStyle(.grouped)
 
             Divider()
 
             HStack {
+                if viewModel.canDeleteEditingEntry {
+                    Button(String(localized: "Delete"), role: .destructive) {
+                        viewModel.deleteEditingEntry()
+                        dismiss()
+                    }
+                }
+                Spacer()
                 Button(String(localized: "Cancel")) {
                     viewModel.cancelEditing()
                     dismiss()
                 }
                 .keyboardShortcut(.cancelAction)
-
-                Spacer()
-
                 Button(String(localized: "Save")) {
                     viewModel.saveEditing()
                     dismiss()
                 }
-                .buttonStyle(.borderedProminent)
                 .keyboardShortcut(.defaultAction)
-                .disabled(viewModel.editOriginal.isEmpty)
+                .disabled(viewModel.editOriginal.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }
-            .padding()
-            .background(Color(NSColor.windowBackgroundColor))
+            .padding(LeiseSpacing.l)
         }
-        .frame(width: 430, height: viewModel.editType == .term ? 455 : 340)
+        .frame(width: 460, height: isTerm ? 400 : 340)
         .onAppear {
             focusedField = .original
         }
@@ -866,9 +606,10 @@ struct FlowLayout: Layout {
     func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
         let result = FlowResult(in: bounds.width, subviews: subviews, spacing: spacing)
         for (index, subview) in subviews.enumerated() {
-            subview.place(at: CGPoint(x: bounds.minX + result.positions[index].x,
-                                      y: bounds.minY + result.positions[index].y),
-                         proposal: .unspecified)
+            subview.place(
+                at: CGPoint(x: bounds.minX + result.positions[index].x, y: bounds.minY + result.positions[index].y),
+                proposal: .unspecified
+            )
         }
     }
 

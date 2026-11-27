@@ -5,6 +5,8 @@ struct HotkeyRecorderView: View {
         case row
         case iconButton(systemName: String)
         case compactChip
+        /// A push button ("Ändern …") that records a new shortcut.
+        case pushButton(title: String)
     }
 
     let label: String
@@ -38,6 +40,26 @@ struct HotkeyRecorderView: View {
             iconButtonBody(systemName: systemName)
         case .compactChip:
             compactChipBody
+        case .pushButton(let buttonTitle):
+            pushButtonBody(title: buttonTitle)
+        }
+    }
+
+    @ViewBuilder
+    private func pushButtonBody(title buttonTitle: String) -> some View {
+        if isRecording {
+            Button {
+                cancelRecording()
+            } label: {
+                Text(recordingLabel)
+                    .foregroundStyle(LeiseColor.tint)
+            }
+            .accessibilityLabel(String(localized: "Recording shortcut - press a key or Escape to cancel"))
+        } else {
+            Button(buttonTitle) {
+                startRecording()
+            }
+            .accessibilityLabel(String(localized: "Record shortcut for \(title)"))
         }
     }
 
@@ -67,7 +89,7 @@ struct HotkeyRecorderView: View {
                 cancelRecording()
             } label: {
                 Text(recordingLabel)
-                    .foregroundStyle(.orange)
+                    .foregroundStyle(LeiseColor.tint)
             }
             .buttonStyle(.bordered)
             .controlSize(.small)
@@ -93,7 +115,7 @@ struct HotkeyRecorderView: View {
                 cancelRecording()
             } label: {
                 Text(recordingLabel)
-                    .foregroundStyle(.orange)
+                    .foregroundStyle(LeiseColor.tint)
             }
             .buttonStyle(.bordered)
             .controlSize(.small)
@@ -110,7 +132,7 @@ struct HotkeyRecorderView: View {
                 cancelRecording()
             } label: {
                 Text(recordingLabel)
-                    .foregroundStyle(.orange)
+                    .foregroundStyle(LeiseColor.tint)
             }
             .buttonStyle(.bordered)
             .controlSize(.small)
@@ -135,9 +157,17 @@ struct HotkeyRecorderView: View {
                 startRecording()
             } label: {
                 Text(label)
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 2)
-                    .background(.quaternary, in: RoundedRectangle(cornerRadius: 4))
+                    .font(.subheadline.weight(.medium))
+                    .padding(.horizontal, LeiseSpacing.s)
+                    .padding(.vertical, LeiseSpacing.xs)
+                    .background {
+                        RoundedRectangle(cornerRadius: LeiseRadius.control, style: .continuous)
+                            .fill(Color(nsColor: .controlBackgroundColor))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: LeiseRadius.control, style: .continuous)
+                                    .strokeBorder(Color.primary.opacity(0.12), lineWidth: 0.5)
+                            )
+                    }
             }
             .buttonStyle(.plain)
             .accessibilityLabel(String(localized: "Current shortcut: \(label). Click to change."))
