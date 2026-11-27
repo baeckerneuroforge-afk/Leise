@@ -4799,6 +4799,8 @@
 			<dict>
 				<key>ASSETCATALOG_COMPILER_APPICON_NAME</key>
 				<string>AppIcon</string>
+				<key>ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME</key>
+				<string>AccentColor</string>
 				<key>CODE_SIGN_ENTITLEMENTS</key>
 				<string>Leise/Resources/Leise.entitlements</string>
 				<key>CODE_SIGN_STYLE</key>
@@ -4852,6 +4854,8 @@
 			<dict>
 				<key>ASSETCATALOG_COMPILER_APPICON_NAME</key>
 				<string>AppIcon</string>
+				<key>ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME</key>
+				<string>AccentColor</string>
 				<key>CODE_SIGN_ENTITLEMENTS</key>
 				<string>Leise/Resources/Leise.entitlements</string>
 				<key>CODE_SIGN_STYLE</key>

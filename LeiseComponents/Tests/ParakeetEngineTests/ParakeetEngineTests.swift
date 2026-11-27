@@ -116,11 +116,13 @@ final class ParakeetEngineImplementationTests: XCTestCase {
 
     private func makeEngine(
         store: TestStore? = nil,
-        restoresPersistedModel: Bool = false
+        restoresPersistedModel: Bool = false,
+        preferredLanguages: [String] = ["en-US"]
     ) -> ParakeetEngineImplementation {
         ParakeetEngineImplementation(
             store: store ?? (try! TestStore()),
-            restoresPersistedModel: restoresPersistedModel
+            restoresPersistedModel: restoresPersistedModel,
+            preferredLanguages: preferredLanguages
         )
     }
 
@@ -409,9 +411,16 @@ final class ParakeetEngineImplementationTests: XCTestCase {
     }
 
     func testInitializationDefaultsToEnglishOnlyV2() throws {
-        let engine = makeEngine(store: try TestStore())
+        let engine = makeEngine(store: try TestStore(), preferredLanguages: ["en-US"])
 
         XCTAssertEqual(engine.supportedLanguages, ["en"])
+    }
+
+    func testInitializationDefaultsToMultilingualV3ForGermanUsers() throws {
+        let engine = makeEngine(store: try TestStore(), preferredLanguages: ["de-DE", "en-US"])
+
+        XCTAssertTrue(engine.supportedLanguages.contains("de"))
+        XCTAssertGreaterThan(engine.supportedLanguages.count, 1)
     }
 
     func testInitializationKeepsPersistedSelectedModelVisibleBeforeRestoreCompletes() throws {

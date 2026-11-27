@@ -1602,7 +1602,7 @@ enum ParakeetVersion: String, CaseIterable {
     func settingsBadge(bundle: Bundle) -> String {
         switch self {
         case .v2:
-            return String(localized: "Default", bundle: bundle)
+            return String(localized: "English only", bundle: bundle)
         case .v3:
             return String(localized: "25 languages", bundle: bundle)
         }

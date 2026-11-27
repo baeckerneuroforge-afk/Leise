@@ -384,6 +384,38 @@
           }
         }
       }
+    },
+    "English only": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nur Englisch"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "英語のみ"
+          }
+        }
+      }
+    },
+    "25 languages": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "25 Sprachen"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "25言語"
+          }
+        }
+      }
     }
   },
   "version": "1.0"
